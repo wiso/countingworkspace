@@ -2,6 +2,8 @@ from countingworkspace import create_workspace
 from countingworkspace.examples import NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT, LUMI
 import numpy as np
 import pytest
+import countingworkspace.utils
+import ROOT
 
 
 def test_create_workspace():
@@ -26,6 +28,23 @@ def test_create_workspace_raise():
             NCATEGORIES, NPROCESS + 1, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT
         )
 
+
 def test_create_workspace_luminosity():
     ws = ROOT.RooWorkspace()
     ws.factory('lumi[%s]' % LUMI)
+
+
+def test_generate_toys():
+    ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
+    toys = countingworkspace.utils.generate_toys(ws, 100)
+    assert toys.numEntries() == 100
+
+
+def test_generate_and_fit():
+    ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
+    countingworkspace.utils.generate_and_fit(ws, 10)
+
+
+def test_toy_study():
+    ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
+    countingworkspace.utils.toy_study(ws, 10, seed=42)

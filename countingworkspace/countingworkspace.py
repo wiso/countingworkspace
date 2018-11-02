@@ -16,18 +16,6 @@ def safe_factory(func):
 ROOT.RooWorkspace.factory = safe_factory(ROOT.RooWorkspace.factory)
 
 
-def loop_iterator(iterator):
-    object = iterator.Next()
-    while object:
-        yield object
-        object = iterator.Next()
-
-
-def iter_collection(rooAbsCollection):
-    iterator = rooAbsCollection.createIterator()
-    return loop_iterator(iterator)
-
-
 def create_observed_number_of_events(ws, ncat, expression='nobs_cat{cat}', nmax=100000):
     logging.info('adding observables for {ncat} categories'.format(ncat=ncat))
 
@@ -119,4 +107,5 @@ def create_workspace(ncategories, nprocess, ntrue, efficiencies, expected_bkg_ca
     create_variables(ws, expression_nexp_bkg_cat, ncategories, expected_bkg_cat)
     create_expected_number_of_signal_events(ws, ncategories, nprocess)
     create_model(ws, ncategories, nprocess)
+    ws.saveSnapshot('initial', ws.allVars())
     return ws
