@@ -17,6 +17,7 @@ install:
   - conda update -q conda
   - conda info -a # Useful for debugging any issues with conda
   - conda config --add channels http://conda.anaconda.org/NLeSC
+  - conda config --add channels http://conda.anaconda.org/conda-forge
   - conda config --set show_channel_urls yes
   - conda create -q -n testenv python=${PYTHON} root=${ROOT} numpy pytest pytest-cov python-coveralls coveralls
   - export CONDA_ENV_PATH=$HOME/miniconda/envs/testenv
