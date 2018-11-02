@@ -18,12 +18,12 @@ install:
   - conda info -a # Useful for debugging any issues with conda
   - conda config --add channels http://conda.anaconda.org/NLeSC
   - conda config --set show_channel_urls yes
-  - conda create -q -n testenv python=${PYTHON} root=${ROOT} numpy pytest
+  - conda create -q -n testenv python=${PYTHON} root=${ROOT} numpy pytest pytest-cov python-coveralls coveralls
   - export CONDA_ENV_PATH=$HOME/miniconda/envs/testenv
   - source activate testenv
 
 script:
-   - py.test tests
+   - py.test tests --cov=countingworkspace
 
 cache: apt
 
