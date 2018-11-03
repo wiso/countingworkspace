@@ -1,0 +1,14 @@
+universe                = vanilla
+executable              = submit.py
+
+when_to_transfer_output = ON_EXIT
+#initialdir              = /afs/cern.ch/user/t/turra/countingworkspace
+transfer_input_files    = countingworkspace
+
++MaxRuntime = 600
+
+output                  = out.$(ClusterId).$(ProcId)
+error                   = err.$(ClusterId).$(ProcId)
+log                     = log.$(ClusterId).$(ProcId)
+
+queue 500
