@@ -50,7 +50,6 @@ def test_toy_study():
     countingworkspace.utils.toy_study(ws, 10, seed=42)
     f = ROOT.TFile.Open('result_42.root')
     tree = f.Get("results")
-    print tree
     assert tree
     assert tree.GetEntries() == 10
     branches = [k.GetName() for k in tree.GetListOfBranches()]
