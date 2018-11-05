@@ -48,3 +48,16 @@ def test_generate_and_fit():
 def test_toy_study():
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
     countingworkspace.utils.toy_study(ws, 10, seed=42)
+    f = ROOT.TFile.Open('result_42.root')
+    tree = f.Get("results")
+    print tree
+    assert tree
+    assert tree.GetEntries() == 10
+    branches = [k.GetName() for k in tree.GetListOfBranches()]
+    assert 'nll' in branches
+    assert 'status' in branches
+    for nproc in range(NPROCESS):
+        assert ("nsignal_gen_proc%d" % nproc) in branches
+        assert ("nsignal_gen_proc%d_error" % nproc) in branches
+        assert ("nsignal_gen_proc%d_error_up" % nproc) in branches
+        assert ("nsignal_gen_proc%d_error_down" % nproc) in branches

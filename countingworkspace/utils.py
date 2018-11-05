@@ -39,15 +39,18 @@ def generate_and_fit(ws, ntoys=100):
         yield fr
 
 
-def toy_study(ws, ntoys=100, seed=0):
+def toy_study(ws, ntoys=100, seed=0, save_errors=True):
     from array import array
     ROOT.RooRandom.randomGenerator().SetSeed(seed)
 
-    f = ROOT.TFile.Open("result_%s.root" % ROOT.RooRandom.randomGenerator().GetSeed(), 'CREATE')
+    f = ROOT.TFile.Open("result_%s.root" % ROOT.RooRandom.randomGenerator().GetSeed(), 'RECREATE')
     tree = ROOT.TTree('results', 'results')
     status = array('i', [0])
     nll = array('f', [0])
-    all_r = {}
+    all_values = {}
+    all_values_error = {}
+    all_values_error_up = {}
+    all_values_error_down = {}
 
     tree.Branch('status', status, 'status/I')
     tree.Branch('nll', nll, 'nll/F')
@@ -60,10 +63,20 @@ def toy_study(ws, ntoys=100, seed=0):
 
         for rr in r:
             name = rr.GetName()
-            if name not in all_r:
-                all_r[name] = array('f', [0])
-                tree.Branch(name, all_r[name], '%s/F' % name)
-            all_r[name][0] = rr.getVal()
+            if name not in all_values:
+                all_values[name] = array('f', [0])
+                tree.Branch(name, all_values[name], '%s/F' % name)
+                if save_errors:
+                    all_values_error[name] = array('f', [0])
+                    all_values_error_up[name] = array('f', [0])
+                    all_values_error_down[name] = array('f', [0])
+                    tree.Branch(name + '_error', all_values_error[name], '%s_error/F' % name)
+                    tree.Branch(name + '_error_up', all_values_error[name], '%s_error_up/F' % name)
+                    tree.Branch(name + '_error_down', all_values_error[name], '%s_error_down/F' % name)
+            all_values[name][0] = rr.getVal()
+            all_values_error[name][0] = rr.getError()
+            all_values_error_up[name][0] = rr.getErrorHi()
+            all_values_error_down[name][0] = rr.getErrorLo()
 
         tree.Fill()
     tree.Write()
