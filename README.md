@@ -1,5 +1,6 @@
 [![Build Status](https://travis-ci.org/wiso/countingworkspace.svg?branch=master)](https://travis-ci.org/wiso/countingworkspace)
-[![Coverage Status](https://coveralls.io/repos/github/wiso/countingworkspace/badge.svg?branch=master)](https://coveralls.io/github/wiso/countingworkspace?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/wiso/countingworkspace/badge.svg?branch=master)](https://coveralls.io/github/wiso/countingworkspace?branch=master) 
+[![PyPI version](https://badge.fury.io/py/countingworkspace.svg)](https://badge.fury.io/py/countingworkspace)
 
 # CountingWorkspace
 
