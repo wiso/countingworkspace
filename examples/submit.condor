@@ -11,4 +11,4 @@ output                  = out.$(ClusterId).$(ProcId)
 error                   = err.$(ClusterId).$(ProcId)
 log                     = log.$(ClusterId).$(ProcId)
 
-queue 500
+queue 2000
