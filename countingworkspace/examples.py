@@ -37,7 +37,7 @@ EXPECTED_BKG_CAT = np.array(
     ]
 )
 
-XSECFID_X_BR_PRODUCTION_MODES = np.array([102, 8.0, 4.5, 1.3])  # fb for |y| < 2.5
+XSECFID_X_BR_PRODUCTION_MODES = np.array([101.5, 7.99, 4.53, 1.33])  # fb for |y| < 2.5
 NTRUE = XSECFID_X_BR_PRODUCTION_MODES * LUMI
 
 EFFICIENCIES_CAT_PRODUCTIONMODE = np.array(
