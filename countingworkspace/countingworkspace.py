@@ -1,6 +1,7 @@
 import ROOT
 import numpy as np
 import logging
+from itertools import product
 logging.basicConfig(level=logging.INFO)
 
 
@@ -26,8 +27,13 @@ def create_observed_number_of_events(ws, ncat, expression='nobs_cat{cat}', nmax=
     ws.defineSet('all_obs', all_obs)
 
 
-def create_variables(ws, expression, NVAR, values=None, ranges=None):
+def create_variables(ws, expression, NVAR=None, values=None, ranges=None):
+    if NVAR is None and values is None:
+        raise ValueError('need to specify NVAR and/or values')
     values = values if values is not None else np.zeros(NVAR)
+    values = np.atleast_1d(values)
+    if NVAR is None:
+        NVAR = len(values)
     if ranges is None:
         ranges = None, None
     ranges = np.asarray(ranges)
@@ -54,10 +60,9 @@ def create_expected_number_of_signal_events(ws, ncat, nproc,
                                             expression_nexp='prod:nexp_signal_cat{cat}_proc{proc}(nsignal_gen_proc{proc}, eff_cat{cat}_proc{proc})'):
     logging.info('adding expected events for {ncat} categories and {nproc} processes'.format(ncat=ncat, nproc=nproc))
     all_expected = ROOT.RooArgSet()
-    for icat in range(ncat):
-        for iprocess in range(nproc):
-            # expected events for given category and process
-            all_expected.add(ws.factory(expression_nexp.format(cat=icat, proc=iprocess)))
+    for icat, iprocess in product(range(ncat), range(nproc)):
+        # expected events for given category and process
+        all_expected.add(ws.factory(expression_nexp.format(cat=icat, proc=iprocess)))
     all_expected.setName('all_expected')
     ws.defineSet('all_signal_expected', all_expected)
 

@@ -1,9 +1,27 @@
 from countingworkspace import create_workspace
+import countingworkspace
 from countingworkspace.examples import NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT, LUMI
 import numpy as np
 import pytest
 import countingworkspace.utils
 import ROOT
+
+
+def test_create_variable_scalar():
+    ws = ROOT.RooWorkspace()
+    countingworkspace.create_variables(ws, 'lumi', values=10.)
+    lumi = ws.var('lumi')
+    assert lumi
+    assert lumi.isConstant()
+    assert lumi.getVal() == 10.
+
+    countingworkspace.create_variables(ws, 'lumi2', values=11., ranges=[1., 20.])
+    lumi2 = ws.var('lumi2')
+    assert lumi2
+    assert not lumi2.isConstant()
+    assert lumi2.getVal() == 11.
+    assert lumi2.getMin() == 1.
+    assert lumi2.getMax() == 20.
 
 
 def test_create_workspace():
