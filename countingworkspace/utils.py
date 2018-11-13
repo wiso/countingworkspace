@@ -22,6 +22,17 @@ def silence_roofit():
     ROOT.RooMsgService.instance().setGlobalKillBelow(ROOT.RooFit.ERROR)
 
 
+def get_free_variables(ws):
+    all_vars = ws.allVars()
+    all_obs = ws.set('all_obs')
+    all_free = ROOT.RooArgSet()
+    for v in iter_collection(all_vars):
+        if not v.isConstant() and not all_obs.contains(v):
+            all_free.add(v)
+    all_free.Print("V")
+    return all_free
+
+
 def generate_toys(ws, ntoys=100):
     all_obs_rooargset = ws.set('all_obs')
     return ws.pdf('model').generate(all_obs_rooargset, ntoys)

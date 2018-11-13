@@ -40,6 +40,12 @@ def test_generate_toys():
     assert toys.numEntries() == 100
 
 
+def test_free_variables():
+    ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
+    free_variables = countingworkspace.utils.get_free_variables(ws)
+    assert free_variables.getSize() == NPROCESS
+
+
 def test_generate_and_fit():
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
     countingworkspace.utils.generate_and_fit(ws, 10)
