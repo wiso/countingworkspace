@@ -29,7 +29,6 @@ def get_free_variables(ws):
     for v in iter_collection(all_vars):
         if not v.isConstant() and not all_obs.contains(v):
             all_free.add(v)
-    all_free.Print("V")
     return all_free
 
 
