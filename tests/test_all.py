@@ -53,6 +53,36 @@ def test_create_formula():
     assert ws.obj('ntrue_3').getVal() == 100 * 4
 
 
+def test_dot():
+    ws = ROOT.RooWorkspace()
+    a = np.arange(10)
+    b = np.arange(10) - 1.5
+    countingworkspace.create_variables(ws, 'a_{index0}', NVAR=10, values=a)
+    countingworkspace.create_variables(ws, 'b_{index0}', NVAR=10, values=b)
+    countingworkspace.dot(ws, 'a_{index0}', 'b_{index0}', nvar=10)
+    for i, c in enumerate(a * b):
+        assert ws.obj('a_x_b_%d' % i).getVal() == c
+
+    countingworkspace.dot(ws, 'a_{index0}', 'b_{index0}', 'd_{index0}')
+    for i, c in enumerate(a * b):
+        assert ws.obj('d_%d' % i).getVal() == c
+
+
+def test_sum():
+    ws = ROOT.RooWorkspace()
+    a = np.arange(10)
+    b = np.arange(10) - 1.5
+    countingworkspace.create_variables(ws, 'a_{index0}', NVAR=10, values=a)
+    countingworkspace.create_variables(ws, 'b_{index0}', NVAR=10, values=b)
+    countingworkspace.sum(ws, 'a_{index0}', 'b_{index0}', nvar=10)
+    for i, c in enumerate(a + b):
+        assert ws.obj('a_plus_b_%d' % i).getVal() == c
+
+    countingworkspace.sum(ws, 'a_{index0}', 'b_{index0}', 'd_{index0}')
+    for i, c in enumerate(a + b):
+        assert ws.obj('d_%d' % i).getVal() == c
+
+
 def test_create_workspace():
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
 
@@ -78,8 +108,7 @@ def test_create_workspace_raise():
 
 def test_create_workspace_luminosity():
     ws = ROOT.RooWorkspace()
-    ws.factory('lumi[%s]' % LUMI)
-
+    ws.factory('lumi[100]')
 
 def test_generate_toys():
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)

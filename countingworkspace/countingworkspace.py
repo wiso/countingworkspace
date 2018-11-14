@@ -103,6 +103,35 @@ def create_model(ws, ncat, nproc,
     ws.factory('PROD:%s(%s)' % (expression_model, ','.join(all_poissons)))
 
 
+def dot(ws, var1, var2, name=None, nvar=None, operation='prod'):
+    results = ROOT.RooArgSet()
+    if name is None:
+        name = var1.replace('_{index0}', '') + '_x_' + var2
+    if nvar is None:
+        s1 = ws.allVars().selectByName(var1.replace('{index0}', '*')).getSize()
+        s2 = ws.allVars().selectByName(var2.replace('{index0}', '*')).getSize()
+        if s1 == 0 or s2 == 0 or s1 != s2:
+            raise ValueError('cannot find variables %s %s of same size' % (var1, var2))
+        nvar = s1
+    for ivar in range(nvar):
+        v1_name = var1.format(index0=ivar)
+        v2_name = var2.format(index0=ivar)
+        prod_name = name.format(index0=ivar)
+        if ws.obj(v1_name) is None:
+            raise ValueError('cannot find "%s"' % v1_name)
+        if ws.obj(v2_name) is None:
+            raise ValueError('cannot find "%s"' % v2_name)
+        v = ws.factory('{}:{}({}, {})'.format(operation, prod_name, v1_name, v2_name))
+        results.add(v)
+    return results
+
+
+def sum(ws, var1, var2, name=None, nvar=None):
+    if name is None:
+        name = var1.replace('_{index0}', '') + '_plus_' + var2
+    return dot(ws, var1, var2, name, nvar, operation='sum')
+
+
 def create_workspace(ncategories, nprocess, ntrue, efficiencies, expected_bkg_cat,
                      expression_nobs='nobs_cat{cat}',
                      expression_efficiency='eff_cat{cat}_proc{proc}',
