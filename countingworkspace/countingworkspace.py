@@ -132,7 +132,10 @@ def sum(ws, var1, var2, name=None, nvar=None):
     return dot(ws, var1, var2, name, nvar, operation='sum')
 
 
-def create_workspace(ncategories, nprocess, ntrue, efficiencies, expected_bkg_cat,
+def create_workspace(ncategories, nprocess,
+                     ntrue_signal_yield=None,
+                     efficiencies=None,
+                     expected_bkg_cat=None,
                      expression_nobs='nobs_cat{cat}',
                      expression_efficiency='eff_cat{cat}_proc{proc}',
                      expression_nsignal_gen='nsignal_gen_proc{index0}',
@@ -147,8 +150,9 @@ def create_workspace(ncategories, nprocess, ntrue, efficiencies, expected_bkg_ca
     ws = ws or ROOT.RooWorkspace()
     create_observed_number_of_events(ws, ncategories, expression=expression_nobs)
     create_efficiencies(ws, efficiencies, expression=expression_efficiency)
-    # create the number of signal event at true level
-    create_variables(ws, expression_nsignal_gen, nprocess, ntrue, (-10000, 50000))
+    # create the number of signal event at true level, only if they are not all present
+    if not all(ws.obj(expression_nsignal_gen.format(index0=icat)) for icat in range(nprocess)):
+        create_variables(ws, expression_nsignal_gen, nprocess, ntrue_signal_yield, (-10000, 50000))
     create_variables(ws, expression_nexp_bkg_cat, ncategories, expected_bkg_cat)
     create_expected_number_of_signal_events(ws, ncategories, nprocess)
     create_model(ws, ncategories, nprocess)
