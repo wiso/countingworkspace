@@ -28,23 +28,34 @@ def create_observed_number_of_events(ws, ncat, expression='nobs_cat{cat}', nmax=
 
 
 def create_variables(ws, expression, NVAR=None, values=None, ranges=None):
-    if NVAR is None and values is None:
+    is_formula = ':' in expression
+
+    if not is_formula and NVAR is None and values is None:
         raise ValueError('need to specify NVAR and/or values')
+    if is_formula and values is not None:
+        raise ValueError('cannot specify value for a formula')
     values = values if values is not None else np.zeros(NVAR)
     values = np.atleast_1d(values)
     if NVAR is None:
         NVAR = len(values)
+    assert NVAR == len(values)
+
     if ranges is None:
         ranges = None, None
     ranges = np.asarray(ranges)
     if ranges.shape == (2, ):
         ranges = ((ranges[0], ranges[1]),) * NVAR
-    for ivar, (value, (min_range, max_range)) in enumerate(zip(values, ranges)):
-        if min_range is None and max_range is None:
-            ws.factory((expression + '[{value}]').format(index0=ivar, value=value))
-        else:
-            ws.factory((expression + '[{value}, {m}, {M}]').format(index0=ivar, value=value,
-                                                                   m=min_range, M=max_range))
+
+    if is_formula:
+        for ivar in range(NVAR):
+            ws.factory(expression.format(index0=ivar))
+    else:
+        for ivar, (value, (min_range, max_range)) in enumerate(zip(values, ranges)):
+            if min_range is None and max_range is None:
+                ws.factory((expression + '[{value}]').format(index0=ivar, value=value))
+            else:
+                ws.factory((expression + '[{value}, {m}, {M}]').format(index0=ivar, value=value,
+                                                                       m=min_range, M=max_range))
 
 
 def create_efficiencies(ws, efficiencies, expression='eff_cat{cat}_proc{proc}'):

@@ -24,6 +24,35 @@ def test_create_variable_scalar():
     assert lumi2.getMax() == 20.
 
 
+def test_create_expected_true():
+    ws = ROOT.RooWorkspace()
+    countingworkspace.create_variables(ws, 'lumi', values=10.)
+    assert ws.var('lumi')
+    NPROC = 4
+    xsvalues = np.arange(1, NPROC + 1)
+    countingworkspace.create_variables(ws, 'xsec_{index0}', NVAR=NPROC, values=xsvalues)
+    ws.Print()
+    assert ws.allVars().getSize() == NPROC + 1
+
+
+def test_create_formula():
+    ws = ROOT.RooWorkspace()
+    countingworkspace.create_variables(ws, 'a', values=10.)
+    assert ws.var('a').getVal() == 10.
+    countingworkspace.create_variables(ws, 'prod:X(a, b[20])')
+    assert ws.var('b').getVal() == 20.
+    assert ws.obj('X').getVal() == 10. * 20.
+
+    NPROC = 4
+    xsvalues = np.arange(1, NPROC + 1)
+    countingworkspace.create_variables(ws, 'xsec_{index0}', NVAR=NPROC, values=xsvalues)
+    countingworkspace.create_variables(ws, 'prod:ntrue_{index0}(lumi[100], xsec_{index0})', NVAR=NPROC)
+    assert ws.obj('ntrue_0').getVal() == 100 * 1
+    assert ws.obj('ntrue_1').getVal() == 100 * 2
+    assert ws.obj('ntrue_2').getVal() == 100 * 3
+    assert ws.obj('ntrue_3').getVal() == 100 * 4
+
+
 def test_create_workspace():
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
 
