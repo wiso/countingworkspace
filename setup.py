@@ -13,6 +13,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/wiso/countingworkspace",
     packages=setuptools.find_packages(),
+    install_requires=['numpy'],
     classifiers=[
         "Programming Language :: Python :: 3",
         "Programming Language :: Python :: 2",
