@@ -17,63 +17,85 @@ def safe_factory(func):
 ROOT.RooWorkspace.factory = safe_factory(ROOT.RooWorkspace.factory)
 
 
-def create_observed_number_of_events(ws, ncat, expression='nobs_cat{cat}', nmax=100000):
-    logging.info('adding observables for {ncat} categories'.format(ncat=ncat))
+def create_observed_number_of_events(ws, bins_cat, expression='nobs_cat{cat}', nmax=100000):
+    if type(bins_cat) == int:
+        bins_cat = map(str, range(bins_cat))
+    logging.info('adding observables for {ncat} categories'.format(ncat=len(bins_cat)))
 
     all_obs = ROOT.RooArgSet()
-    for icat in range(ncat):
-        _ = ws.factory((expression + '[0, {nmax}]').format(cat=icat, nmax=nmax))
+    for b in bins_cat:
+        _ = ws.factory((expression + '[0, {nmax}]').format(cat=b, nmax=nmax))
         all_obs.add(_)
     ws.defineSet('all_obs', all_obs)
 
 
-def create_variables(ws, expression, NVAR=None, values=None, ranges=None):
+def create_variables(ws, expression, bins=None, values=None, ranges=None):
     is_formula = ':' in expression
 
-    if not is_formula and NVAR is None and values is None:
-        raise ValueError('need to specify NVAR and/or values')
-    if is_formula and values is not None:
-        raise ValueError('cannot specify value for a formula')
-    values = values if values is not None else np.zeros(NVAR)
-    values = np.atleast_1d(values)
-    if NVAR is None:
-        NVAR = len(values)
-    assert NVAR == len(values)
-
-    if ranges is None:
-        ranges = None, None
-    ranges = np.asarray(ranges)
-    if ranges.shape == (2, ):
-        ranges = ((ranges[0], ranges[1]),) * NVAR
+    if type(bins) is int:
+        bins = map(str, range(bins))
 
     if is_formula:
-        for ivar in range(NVAR):
-            ws.factory(expression.format(index0=ivar))
+        if values is not None:
+            raise ValueError('cannot specify values for formula %s' % expression)
+        if bins is None:
+            ws.factory(expression)
+        else:
+            for b in bins:
+                ws.factory(expression.format(index0=b))
     else:
-        for ivar, (value, (min_range, max_range)) in enumerate(zip(values, ranges)):
+        if bins is None and values is None:
+            raise ValueError('need to specify bins and/or values')
+        if values is None:
+            values = np.zeros(len(bins))
+        values = np.atleast_1d(values)
+        if bins is None:
+            bins = map(str, range(len(values)))
+
+        if ranges is None:
+            ranges = None, None
+        ranges = np.asarray(ranges)
+        if ranges.shape == (2, ):
+            ranges = ((ranges[0], ranges[1]),) * len(bins)
+
+        for b, value, (min_range, max_range) in zip(bins, values, ranges):
             if min_range is None and max_range is None:
-                ws.factory((expression + '[{value}]').format(index0=ivar, value=value))
+                ws.factory((expression + '[{value}]').format(index0=b, value=value))
             else:
-                ws.factory((expression + '[{value}, {m}, {M}]').format(index0=ivar, value=value,
+                ws.factory((expression + '[{value}, {m}, {M}]').format(index0=b, value=value,
                                                                        m=min_range, M=max_range))
 
 
-def create_efficiencies(ws, efficiencies, expression='eff_cat{cat}_proc{proc}'):
-    ncat, nprocesses = efficiencies.shape
-    logging.info('adding efficiencies for {ncat} categories and {nproc} processes'.format(ncat=ncat, nproc=nprocesses))
-    for icat in range(ncat):
-        for iprocess in range(nprocesses):
-            value = efficiencies[icat][iprocess]
-            ws.factory((expression + '[{value}]').format(cat=icat, proc=iprocess, value=value))
+def create_efficiencies(ws, efficiencies, expression='eff_cat{cat}_proc{proc}',
+                        bins_proc=None, bins_cat=None):
+    ncat, nproc = efficiencies.shape
+    if bins_proc is None or type(bins_proc) is int:
+        bins_proc = map(str, range(nproc))
+        if type(bins_proc) is int and bins_proc != nproc:
+            raise ValueError("Number of processes (%d) don't match number efficiency shape (%d, %d)" % (bins_proc, ncat, nproc))
+    if bins_cat is None or type(bins_cat) is int:
+        bins_cat = map(str, range(ncat))
+        if type(bins_cat) is int and bins_cat != ncat:
+            raise ValueError("Number of categories (%d) don't match number efficiency shape (%d, %d)" % (bins_cat, ncat, nproc))
+    logging.info('adding efficiencies for {ncat} categories and {nproc} processes'.format(ncat=ncat, nproc=nproc))
+    for icat, cat in enumerate(bins_cat):
+        for iproc, proc in enumerate(bins_proc):
+            value = efficiencies[icat][iproc]
+            ws.factory((expression + '[{value}]').format(cat=cat, proc=proc, value=value))
 
 
-def create_expected_number_of_signal_events(ws, ncat, nproc,
+def create_expected_number_of_signal_events(ws, bins_cat, bins_proc,
                                             expression_nexp='prod:nexp_signal_cat{cat}_proc{proc}(nsignal_gen_proc{proc}, eff_cat{cat}_proc{proc})'):
+    if type(bins_cat) is int:
+        bins_cat = map(str, range(bins_cat))
+    if type(bins_proc) is int:
+        bins_proc = map(str, range(bins_proc))
+    ncat, nproc = len(bins_cat), len(bins_proc)
     logging.info('adding expected events for {ncat} categories and {nproc} processes'.format(ncat=ncat, nproc=nproc))
     all_expected = ROOT.RooArgSet()
-    for icat, iprocess in product(range(ncat), range(nproc)):
+    for cat, proc in product(bins_cat, bins_proc):
         # expected events for given category and process
-        all_expected.add(ws.factory(expression_nexp.format(cat=icat, proc=iprocess)))
+        all_expected.add(ws.factory(expression_nexp.format(cat=cat, proc=proc)))
     all_expected.setName('all_expected')
     ws.defineSet('all_signal_expected', all_expected)
 
