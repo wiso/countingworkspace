@@ -5,6 +5,10 @@ from itertools import product
 logging.basicConfig(level=logging.INFO)
 
 
+def string_range(n):
+    return [str(nn) for nn in range(n)]
+
+
 def safe_factory(func):
     def wrapper(self, *args, **kwargs):
         result = func(self, *args)
@@ -19,7 +23,7 @@ ROOT.RooWorkspace.factory = safe_factory(ROOT.RooWorkspace.factory)
 
 def create_observed_number_of_events(ws, bins_cat, expression='nobs_cat{cat}', nmax=100000):
     if type(bins_cat) == int:
-        bins_cat = map(str, range(bins_cat))
+        bins_cat = string_range(bins_cat)
     logging.info('adding observables for {ncat} categories'.format(ncat=len(bins_cat)))
 
     all_obs = ROOT.RooArgSet()
@@ -33,7 +37,7 @@ def create_variables(ws, expression, bins=None, values=None, ranges=None):
     is_formula = ':' in expression
 
     if type(bins) is int:
-        bins = map(str, range(bins))
+        bins = string_range(bins)
 
     if is_formula:
         if values is not None:
@@ -50,7 +54,7 @@ def create_variables(ws, expression, bins=None, values=None, ranges=None):
             values = np.zeros(len(bins))
         values = np.atleast_1d(values)
         if bins is None:
-            bins = map(str, range(len(values)))
+            bins = string_range(len(values))
 
         if ranges is None:
             ranges = None, None
@@ -70,11 +74,11 @@ def create_efficiencies(ws, efficiencies, expression='eff_cat{cat}_proc{proc}',
                         bins_proc=None, bins_cat=None):
     ncat, nproc = efficiencies.shape
     if bins_proc is None or type(bins_proc) is int:
-        bins_proc = map(str, range(nproc))
+        bins_proc = string_range(nproc)
         if type(bins_proc) is int and bins_proc != nproc:
             raise ValueError("Number of processes (%d) don't match number efficiency shape (%d, %d)" % (bins_proc, ncat, nproc))
     if bins_cat is None or type(bins_cat) is int:
-        bins_cat = map(str, range(ncat))
+        bins_cat = string_range(ncat)
         if type(bins_cat) is int and bins_cat != ncat:
             raise ValueError("Number of categories (%d) don't match number efficiency shape (%d, %d)" % (bins_cat, ncat, nproc))
     logging.info('adding efficiencies for {ncat} categories and {nproc} processes'.format(ncat=ncat, nproc=nproc))
@@ -87,9 +91,9 @@ def create_efficiencies(ws, efficiencies, expression='eff_cat{cat}_proc{proc}',
 def create_expected_number_of_signal_events(ws, bins_cat, bins_proc,
                                             expression_nexp='prod:nexp_signal_cat{cat}_proc{proc}(nsignal_gen_proc{proc}, eff_cat{cat}_proc{proc})'):
     if type(bins_cat) is int:
-        bins_cat = map(str, range(bins_cat))
+        bins_cat = string_range(bins_cat)
     if type(bins_proc) is int:
-        bins_proc = map(str, range(bins_proc))
+        bins_proc = string_range(bins_proc)
     ncat, nproc = len(bins_cat), len(bins_proc)
     logging.info('adding expected events for {ncat} categories and {nproc} processes'.format(ncat=ncat, nproc=nproc))
     all_expected = ROOT.RooArgSet()
