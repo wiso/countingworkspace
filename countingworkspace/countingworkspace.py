@@ -2,6 +2,7 @@ import ROOT
 import numpy as np
 import logging
 from itertools import product
+import utils
 logging.basicConfig(level=logging.INFO)
 
 
@@ -183,4 +184,12 @@ def create_workspace(ncategories, nprocess,
     create_expected_number_of_signal_events(ws, ncategories, nprocess)
     create_model(ws, ncategories, nprocess)
     ws.saveSnapshot('initial', ws.allVars())
+
+    model_config = ROOT.RooStats.ModelConfig('ModelConfig', ws)
+    model_config.SetPdf('model')
+    model_config.SetObservables(ws.set('all_obs'))
+    poi = utils.get_free_variables(ws)
+    model_config.SetParametersOfInterest(poi)
+    getattr(ws, 'import')(model_config)
+
     return ws
