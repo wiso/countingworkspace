@@ -2,7 +2,7 @@ import ROOT
 import numpy as np
 import logging
 from itertools import product
-import utils
+from . import utils
 logging.basicConfig(level=logging.INFO)
 
 
