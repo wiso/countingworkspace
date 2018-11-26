@@ -278,3 +278,12 @@ def test_toy_study():
         assert ("nsignal_gen_proc%d_error" % nproc) in branches
         assert ("nsignal_gen_proc%d_error_up" % nproc) in branches
         assert ("nsignal_gen_proc%d_error_down" % nproc) in branches
+
+
+def test_asimov():
+    ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
+    asimov = countingworkspace.utils.generate_asimov(ws)
+    assert asimov
+    d = asimov.get(0)
+    assert d.getSize() == NCATEGORIES
+    np.testing.assert_allclose([x.getVal() for x in iter_collection(d)], np.dot(EFFICIENCIES, NTRUE) + EXPECTED_BKG_CAT)
