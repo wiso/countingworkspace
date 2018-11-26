@@ -191,7 +191,7 @@ def create_workspace(categories, processes,
 
     ws = ws or ROOT.RooWorkspace()
     create_observed_number_of_events(ws, categories, expression=expression_nobs)
-    create_efficiencies(ws, efficiencies, expression=expression_efficiency)
+    create_efficiencies(ws, efficiencies, expression=expression_efficiency, bins_proc=processes, bins_cat=categories)
     # create the number of signal event at true level, only if they are not all present
     if not all(ws.obj(expression_nsignal_gen.format(index0=icat)) for icat in range(nproc)):
         create_variables(ws, expression_nsignal_gen, processes, ntrue_signal_yield, (-10000, 50000))
