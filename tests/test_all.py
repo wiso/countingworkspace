@@ -166,6 +166,21 @@ def test_create_workspace_luminosity():
                      expression_nsignal_gen='nsignal_gen_proc{index0}',
                      ws=ws_with_4mu_x_mu)
 
+    # same, but with names
+    ws_with_4mu_x_mu_names = ROOT.RooWorkspace()
+    ws_with_4mu_x_mu_names.factory('lumi[%f]' % LUMI)
+    countingworkspace.create_variables(ws_with_4mu_x_mu_names, 'xsec_{index0}',
+                                       bins=list(map(str, range(NPROCESS))),
+                                       values=XSECFID_X_BR_PRODUCTION_MODES)
+    countingworkspace.create_variables(ws_with_4mu_x_mu_names,
+                                       'prod:nsignal_gen_proc{index0}(mu[1, -4, 5], mu_{index0}[1, -4, 5], lumi, xsec_{index0})',
+                                       bins=list(map(str, range(NPROCESS))))
+
+    create_workspace(list(map(str, range(NCATEGORIES))),
+                     list(map(str, range(NPROCESS))), None, EFFICIENCIES, EXPECTED_BKG_CAT,
+                     expression_nsignal_gen='nsignal_gen_proc{index0}',
+                     ws=ws_with_4mu_x_mu_names)
+
     # nominal workspace for reference
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
 
@@ -183,6 +198,10 @@ def test_create_workspace_luminosity():
         assert v_4mu_x_mu
         np.testing.assert_allclose(v.getVal(), v_4mu_x_mu.getVal())
 
+        v_4mu_x_mu_names = ws_with_4mu_x_mu_names.obj(v.GetName())
+        assert v_4mu_x_mu_names
+        np.testing.assert_allclose(v.getVal(), v_4mu_x_mu_names.getVal())
+
     all_f = ws.allFunctions()
     for f in iter_collection(all_f):
         f_lumi = ws_with_lumi.obj(f.GetName())
@@ -196,6 +215,10 @@ def test_create_workspace_luminosity():
         f_4mu_x_mu = ws_with_4mu_x_mu.obj(f.GetName())
         assert f_4mu_x_mu
         np.testing.assert_allclose(f.getVal(), f_4mu_x_mu.getVal())
+
+        f_4mu_x_mu_names = ws_with_4mu_x_mu_names.obj(f.GetName())
+        assert f_4mu_x_mu_names
+        np.testing.assert_allclose(f.getVal(), f_4mu_x_mu_names.getVal())
 
     all_pdf = ws.allPdfs()
     for p in iter_collection(all_pdf):
@@ -211,10 +234,15 @@ def test_create_workspace_luminosity():
         assert p_4mu_x_mu
         np.testing.assert_allclose(p.getVal(), p_4mu_x_mu.getVal())
 
+        p_4mu_x_mu_names = ws_with_4mu_x_mu_names.pdf(p.GetName())
+        assert p_4mu_x_mu_names
+        np.testing.assert_allclose(p.getVal(), p_4mu_x_mu_names.getVal())
+
     assert countingworkspace.utils.get_free_variables(ws).getSize() == \
            countingworkspace.utils.get_free_variables(ws_with_lumi).getSize() == \
            countingworkspace.utils.get_free_variables(ws_with_4mu).getSize() == \
            countingworkspace.utils.get_free_variables(ws_with_4mu_x_mu).getSize() - 1 == \
+           countingworkspace.utils.get_free_variables(ws_with_4mu_x_mu_names).getSize() - 1 == \
            NPROCESS
 
 

@@ -7,6 +7,8 @@ logging.basicConfig(level=logging.INFO)
 
 
 def string_range(n):
+    if type(n) is not int or n < 0:
+        raise ValueError("parameters should be a non-negative integer")
     return [str(nn) for nn in range(n)]
 
 
@@ -105,7 +107,7 @@ def create_expected_number_of_signal_events(ws, bins_cat, bins_proc,
     ws.defineSet('all_signal_expected', all_expected)
 
 
-def create_model(ws, ncat, nproc,
+def create_model(ws, categories, processes,
                  expression_nexpected_signal_cat_proc='nexp_signal_cat{cat}_proc{proc}',
                  expression_nexpected_bkg_cat_proc='nexp_bkg_cat{cat}',
                  expression_nexpected_cat='nexp_cat{cat}',
@@ -113,19 +115,24 @@ def create_model(ws, ncat, nproc,
                  expression_model_cat='model_cat{cat}',
                  expression_model='model'
                  ):
+    if type(categories) is int:
+        categories = string_range(categories)
+    if type(processes) is int:
+        processes = string_range(processes)
+
     all_poissons = []
     all_exp = ROOT.RooArgSet()
-    for icat in range(ncat):
-        s = ','.join([expression_nexpected_signal_cat_proc.format(cat=icat, proc=iproc) for iproc in range(nproc)])
+    for cat in categories:
+        s = ','.join([expression_nexpected_signal_cat_proc.format(cat=cat, proc=proc) for proc in processes])
         if expression_nexpected_bkg_cat_proc is not None:
-            s += ',' + expression_nexpected_bkg_cat_proc.format(cat=icat)
-        var_expected = ws.factory('sum:{expression_nexpected_cat}({s})'.format(expression_nexpected_cat=expression_nexpected_cat.format(cat=icat), s=s))
+            s += ',' + expression_nexpected_bkg_cat_proc.format(cat=cat)
+        var_expected = ws.factory('sum:{expression_nexpected_cat}({s})'.format(expression_nexpected_cat=expression_nexpected_cat.format(cat=cat), s=s))
         all_exp.add(var_expected)
         model = 'Poisson:{model_cat}({nobs_cat}, {nexp_cat})'.format(model_cat=expression_model_cat,
                                                                      nobs_cat=expression_nobserved,
                                                                      nexp_cat=expression_nexpected_cat)
 
-        all_poissons.append(str(ws.factory(model.format(cat=icat)).getTitle()))
+        all_poissons.append(str(ws.factory(model.format(cat=cat)).getTitle()))
     ws.defineSet('all_exp', all_exp)
     ws.factory('PROD:%s(%s)' % (expression_model, ','.join(all_poissons)))
 
@@ -159,7 +166,7 @@ def sum(ws, var1, var2, name=None, nvar=None):
     return dot(ws, var1, var2, name, nvar, operation='sum')
 
 
-def create_workspace(ncategories, nprocess,
+def create_workspace(categories, processes,
                      ntrue_signal_yield=None,
                      efficiencies=None,
                      expected_bkg_cat=None,
@@ -168,21 +175,29 @@ def create_workspace(ncategories, nprocess,
                      expression_nsignal_gen='nsignal_gen_proc{index0}',
                      expression_nexp_bkg_cat='nexp_bkg_cat{index0}',
                      ws=None):
-    if ncategories <= 0 or nprocess <= 0:
+    if type(categories) is int:
+        categories = string_range(categories)
+    if type(processes) is int:
+        processes = string_range(processes)
+    if not len(categories) or not len(processes):
         raise ValueError('ncategories and nprocess must be positive')
+
+    nproc = len(processes)
+    ncat = len(categories)
+
     efficiencies = np.asarray(efficiencies)
-    if efficiencies.shape != (ncategories, nprocess):
-        raise ValueError('shape of efficiencies should match (ncategories, nprocess) = ()%d, %d)' % (ncategories, nprocess))
+    if efficiencies.shape != (len(categories), len(processes)):
+        raise ValueError('shape of efficiencies should match (ncategories, nprocess) = ()%d, %d)' % (ncat, nproc))
 
     ws = ws or ROOT.RooWorkspace()
-    create_observed_number_of_events(ws, ncategories, expression=expression_nobs)
+    create_observed_number_of_events(ws, categories, expression=expression_nobs)
     create_efficiencies(ws, efficiencies, expression=expression_efficiency)
     # create the number of signal event at true level, only if they are not all present
-    if not all(ws.obj(expression_nsignal_gen.format(index0=icat)) for icat in range(nprocess)):
-        create_variables(ws, expression_nsignal_gen, nprocess, ntrue_signal_yield, (-10000, 50000))
-    create_variables(ws, expression_nexp_bkg_cat, ncategories, expected_bkg_cat)
-    create_expected_number_of_signal_events(ws, ncategories, nprocess)
-    create_model(ws, ncategories, nprocess)
+    if not all(ws.obj(expression_nsignal_gen.format(index0=icat)) for icat in range(nproc)):
+        create_variables(ws, expression_nsignal_gen, processes, ntrue_signal_yield, (-10000, 50000))
+    create_variables(ws, expression_nexp_bkg_cat, categories, expected_bkg_cat)
+    create_expected_number_of_signal_events(ws, categories, processes)
+    create_model(ws, categories, processes)
     ws.saveSnapshot('initial', ws.allVars())
 
     model_config = ROOT.RooStats.ModelConfig('ModelConfig', ws)
