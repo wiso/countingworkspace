@@ -129,7 +129,7 @@ def test_asimov_roostats():
         if type(v) != ROOT.RooCategory:
             np.testing.assert_allclose(v.getVal(), ws.obj('nexp_cat%s' % ivar).getVal())
 
-    
+
 def test_asimov():
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
     data_asimov = countingworkspace.utils.generate_asimov(ws)
@@ -144,11 +144,11 @@ def test_fit_asimov():
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
     obs = ws.set('all_obs')
     pdf = ws.obj('model')
-    assert(obs)
-    assert(pdf)  
-    data_asimov = ROOT.RooStats.AsymptoticCalculator.GenerateAsimovData(pdf, obs) 
+    assert obs
+    assert pdf
+    data_asimov = ROOT.RooStats.AsymptoticCalculator.GenerateAsimovData(pdf, obs)
     pois = ws.obj('ModelConfig').GetParametersOfInterest()
-    assert(pois)
+    assert pois
 
     # not start the fit from the true values
     for poi in iter_collection(pois):
@@ -159,8 +159,8 @@ def test_fit_asimov():
     pois_fitted = fr.floatParsFinal()
     for ntrue, poi_fitted in zip(NTRUE, iter_collection(pois_fitted)):
         np.testing.assert_allclose(ntrue, poi_fitted.getVal(), rtol=0.002)
-        
-    
+
+
 def test_create_workspace_raise():
     with pytest.raises(ValueError):
         create_workspace(
@@ -324,5 +324,3 @@ def test_toy_study():
         assert ("nsignal_gen_proc%d_error" % nproc) in branches
         assert ("nsignal_gen_proc%d_error_up" % nproc) in branches
         assert ("nsignal_gen_proc%d_error_down" % nproc) in branches
-
-
