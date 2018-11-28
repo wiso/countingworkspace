@@ -113,7 +113,8 @@ def create_model(ws, categories, processes,
                  expression_nexpected_cat='nexp_cat{cat}',
                  expression_nobserved='nobs_cat{cat}',
                  expression_model_cat='model_cat{cat}',
-                 expression_model='model'
+                 expression_model='model',
+                 use_simul=True
                  ):
     if type(categories) is int:
         categories = string_range(categories)
@@ -134,7 +135,12 @@ def create_model(ws, categories, processes,
 
         all_poissons.append(str(ws.factory(model.format(cat=cat)).getTitle()))
     ws.defineSet('all_exp', all_exp)
-    ws.factory('PROD:%s(%s)' % (expression_model, ','.join(all_poissons)))
+    if use_simul:
+        ws.factory('index[%s]' % ','.join(['index_%s' % cat for cat in categories]))
+        exp_simul = ','.join(['index_{cat}={model_cat}'.format(cat=cat, model_cat=expression_model_cat.format(cat=cat)) for cat in categories])
+        ws.factory('SIMUL:%s(index, %s)' % (expression_model, exp_simul))
+    else:
+        ws.factory('PROD:%s(%s)' % (expression_model, ','.join(all_poissons)))
 
 
 def dot(ws, var1, var2, name=None, nvar=None, operation='prod'):
@@ -174,7 +180,7 @@ def create_workspace(categories, processes,
                      expression_efficiency='eff_cat{cat}_proc{proc}',
                      expression_nsignal_gen='nsignal_gen_proc{index0}',
                      expression_nexp_bkg_cat='nexp_bkg_cat{index0}',
-                     ws=None):
+                     ws=None, use_simul=True):
     if type(categories) is int:
         categories = string_range(categories)
     if type(processes) is int:
@@ -197,7 +203,7 @@ def create_workspace(categories, processes,
         create_variables(ws, expression_nsignal_gen, processes, ntrue_signal_yield, (-10000, 50000))
     create_variables(ws, expression_nexp_bkg_cat, categories, expected_bkg_cat)
     create_expected_number_of_signal_events(ws, categories, processes)
-    create_model(ws, categories, processes)
+    create_model(ws, categories, processes, use_simul=use_simul)
     ws.saveSnapshot('initial', ws.allVars())
 
     model_config = ROOT.RooStats.ModelConfig('ModelConfig', ws)

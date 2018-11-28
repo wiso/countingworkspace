@@ -53,6 +53,10 @@ def generate_and_fit(ws, ntoys=100):
     toys = generate_toys(ws, ntoys)
     for itoy in range(ntoys):
         toy_data = toys.get(itoy)
+        # TODO: bad trick
+        c = ws.cat('index')
+        if c:
+            toy_data.add(c)
         toy = ROOT.RooDataSet('toy_%d' % itoy, 'toy_%d' % itoy, toy_data)
         toy.add(toy_data)
         ws.loadSnapshot('initial')

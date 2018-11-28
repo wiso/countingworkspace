@@ -115,7 +115,42 @@ def test_create_workspace():
                 EFFICIENCIES[ncat][nproc],
             )
 
+def test_asimov_roostats():
+    ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
+    obs = ws.set('all_obs')
+    pdf = ws.obj('model')
+    assert(obs)
+    assert(pdf)
+    data_asimov = ROOT.RooStats.AsymptoticCalculator.GenerateAsimovData(pdf, obs)
+    assert(data_asimov)
+    assert(data_asimov.numEntries() == NCATEGORIES)
+    
+    for ivar, v in enumerate(iter_collection(data_asimov.get(0))):
+        if type(v) != ROOT.RooCategory:
+            np.testing.assert_allclose(v.getVal(), ws.obj('nexp_cat%s' % ivar).getVal())
+    
 
+def test_fit_asimov():
+    ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
+    obs = ws.set('all_obs')
+    pdf = ws.obj('model')
+    assert(obs)
+    assert(pdf)  
+    data_asimov = ROOT.RooStats.AsymptoticCalculator.GenerateAsimovData(pdf, obs) 
+    pois = ws.obj('ModelConfig').GetParametersOfInterest()
+    assert(pois)
+
+    # not start the fit from the true values
+    for poi in iter_collection(pois):
+        poi.setVal(poi.getVal() * 1.1)
+
+    fr = pdf.fitTo(data_asimov, ROOT.RooFit.Save())
+    assert(fr.status() == 0)
+    pois_fitted = fr.floatParsFinal()
+    for ntrue, poi_fitted in zip(NTRUE, iter_collection(pois_fitted)):
+        np.testing.assert_allclose(ntrue, poi_fitted.getVal(), rtol=0.002)
+        
+    
 def test_create_workspace_raise():
     with pytest.raises(ValueError):
         create_workspace(
@@ -260,16 +295,17 @@ def test_free_variables():
 
 def test_generate_and_fit():
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
-    countingworkspace.utils.generate_and_fit(ws, 10)
+    list(countingworkspace.utils.generate_and_fit(ws, 10))
 
 
 def test_toy_study():
-    ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
-    countingworkspace.utils.toy_study(ws, 10, seed=42)
+    ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT, use_simul=False)
+    NTOYS = 10
+    countingworkspace.utils.toy_study(ws, NTOYS, seed=42)
     f = ROOT.TFile.Open('result_42.root')
     tree = f.Get("results")
     assert tree
-    assert tree.GetEntries() == 10
+    assert tree.GetEntries() == NTOYS
     branches = [k.GetName() for k in tree.GetListOfBranches()]
     assert 'nll' in branches
     assert 'status' in branches
