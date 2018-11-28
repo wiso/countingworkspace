@@ -123,12 +123,22 @@ def test_asimov_roostats():
     assert(pdf)
     data_asimov = ROOT.RooStats.AsymptoticCalculator.GenerateAsimovData(pdf, obs)
     assert(data_asimov)
-    assert(data_asimov.numEntries() == NCATEGORIES)
-    
+    assert(data_asimov.numEntries() == 1)
+
     for ivar, v in enumerate(iter_collection(data_asimov.get(0))):
         if type(v) != ROOT.RooCategory:
             np.testing.assert_allclose(v.getVal(), ws.obj('nexp_cat%s' % ivar).getVal())
+
     
+def test_asimov():
+    ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
+    data_asimov = countingworkspace.utils.generate_asimov(ws)
+    assert data_asimov
+    assert data_asimov.numEntries() == 1
+    d = data_asimov.get(0)
+    assert d.getSize() == NCATEGORIES
+    np.testing.assert_allclose([x.getVal() for x in iter_collection(d)], np.dot(EFFICIENCIES, NTRUE) + EXPECTED_BKG_CAT)
+
 
 def test_fit_asimov():
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
@@ -299,7 +309,7 @@ def test_generate_and_fit():
 
 
 def test_toy_study():
-    ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT, use_simul=False)
+    ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
     NTOYS = 10
     countingworkspace.utils.toy_study(ws, NTOYS, seed=42)
     f = ROOT.TFile.Open('result_42.root')
@@ -316,10 +326,3 @@ def test_toy_study():
         assert ("nsignal_gen_proc%d_error_down" % nproc) in branches
 
 
-def test_asimov():
-    ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
-    asimov = countingworkspace.utils.generate_asimov(ws)
-    assert asimov
-    d = asimov.get(0)
-    assert d.getSize() == NCATEGORIES
-    np.testing.assert_allclose([x.getVal() for x in iter_collection(d)], np.dot(EFFICIENCIES, NTRUE) + EXPECTED_BKG_CAT)

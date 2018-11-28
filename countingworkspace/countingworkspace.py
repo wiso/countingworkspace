@@ -114,7 +114,7 @@ def create_model(ws, categories, processes,
                  expression_nobserved='nobs_cat{cat}',
                  expression_model_cat='model_cat{cat}',
                  expression_model='model',
-                 use_simul=True
+                 use_simul=False
                  ):
     if type(categories) is int:
         categories = string_range(categories)
@@ -180,7 +180,7 @@ def create_workspace(categories, processes,
                      expression_efficiency='eff_cat{cat}_proc{proc}',
                      expression_nsignal_gen='nsignal_gen_proc{index0}',
                      expression_nexp_bkg_cat='nexp_bkg_cat{index0}',
-                     ws=None, use_simul=True):
+                     ws=None, use_simul=False):
     if type(categories) is int:
         categories = string_range(categories)
     if type(processes) is int:
