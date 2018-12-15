@@ -109,7 +109,7 @@ def create_expected_number_of_signal_events(ws, bins_cat, bins_proc,
 
 def create_model(ws, categories, processes,
                  expression_nexpected_signal_cat_proc='nexp_signal_cat{cat}_proc{proc}',
-                 expression_nexpected_bkg_cat_proc='nexp_bkg_cat{cat}',
+                 expression_nexpected_bkg_cat='nexp_bkg_cat{cat}',
                  expression_nexpected_cat='nexp_cat{cat}',
                  expression_nobserved='nobs_cat{cat}',
                  expression_model_cat='model_cat{cat}',
@@ -125,8 +125,8 @@ def create_model(ws, categories, processes,
     all_exp = ROOT.RooArgSet()
     for cat in categories:
         s = ','.join([expression_nexpected_signal_cat_proc.format(cat=cat, proc=proc) for proc in processes])
-        if expression_nexpected_bkg_cat_proc is not None:
-            s += ',' + expression_nexpected_bkg_cat_proc.format(cat=cat)
+        if expression_nexpected_bkg_cat is not None:
+            s += ',' + expression_nexpected_bkg_cat.format(cat=cat)
         var_expected = ws.factory('sum:{expression_nexpected_cat}({s})'.format(expression_nexpected_cat=expression_nexpected_cat.format(cat=cat), s=s))
         all_exp.add(var_expected)
         model = 'Poisson:{model_cat}({nobs_cat}, {nexp_cat})'.format(model_cat=expression_model_cat,
