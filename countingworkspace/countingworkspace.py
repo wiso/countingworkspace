@@ -111,7 +111,7 @@ def create_model(ws, categories, processes,
                  expression_nexpected_signal_cat_proc='nexp_signal_cat{cat}_proc{proc}',
                  expression_nexpected_bkg_cat='nexp_bkg_cat{cat}',
                  expression_nexpected_cat='nexp_cat{cat}',
-                 expression_nobserved='nobs_cat{cat}',
+                 expression_nobs_cat='nobs_cat{cat}',
                  expression_model_cat='model_cat{cat}',
                  expression_model='model',
                  use_simul=False
@@ -130,7 +130,7 @@ def create_model(ws, categories, processes,
         var_expected = ws.factory('sum:{expression_nexpected_cat}({s})'.format(expression_nexpected_cat=expression_nexpected_cat.format(cat=cat), s=s))
         all_exp.add(var_expected)
         model = 'Poisson:{model_cat}({nobs_cat}, {nexp_cat})'.format(model_cat=expression_model_cat,
-                                                                     nobs_cat=expression_nobserved,
+                                                                     nobs_cat=expression_nobs_cat,
                                                                      nexp_cat=expression_nexpected_cat)
 
         all_poissons.append(str(ws.factory(model.format(cat=cat)).getTitle()))
@@ -173,13 +173,13 @@ def sum(ws, var1, var2, name=None, nvar=None):
 
 
 def create_workspace(categories, processes,
-                     ntrue_signal_yield=None,
+                     nsignal_gen=None,
                      efficiencies=None,
-                     expected_bkg_cat=None,
-                     expression_nobs='nobs_cat{cat}',
+                     nexpected_bkg_cat=None,
+                     expression_nobs_cat='nobs_cat{cat}',
                      expression_efficiency='eff_cat{cat}_proc{proc}',
                      expression_nsignal_gen='nsignal_gen_proc{index0}',
-                     expression_nexp_bkg_cat='nexp_bkg_cat{index0}',
+                     expression_nexpected_bkg_cat='nexp_bkg_cat{index0}',
                      ws=None, use_simul=False):
     if type(categories) is int:
         categories = string_range(categories)
@@ -196,12 +196,12 @@ def create_workspace(categories, processes,
         raise ValueError('shape of efficiencies should match (ncategories, nprocess) = ()%d, %d)' % (ncat, nproc))
 
     ws = ws or ROOT.RooWorkspace()
-    create_observed_number_of_events(ws, categories, expression=expression_nobs)
+    create_observed_number_of_events(ws, categories, expression=expression_nobs_cat)
     create_efficiencies(ws, efficiencies, expression=expression_efficiency, bins_proc=processes, bins_cat=categories)
     # create the number of signal event at true level, only if they are not all present
     if not all(ws.obj(expression_nsignal_gen.format(index0=icat)) for icat in range(nproc)):
-        create_variables(ws, expression_nsignal_gen, processes, ntrue_signal_yield, (-10000, 50000))
-    create_variables(ws, expression_nexp_bkg_cat, categories, expected_bkg_cat)
+        create_variables(ws, expression_nsignal_gen, processes, nsignal_gen, (-10000, 50000))
+    create_variables(ws, expression_nexpected_bkg_cat, categories, nexpected_bkg_cat)
     create_expected_number_of_signal_events(ws, categories, processes)
     create_model(ws, categories, processes, use_simul=use_simul)
     ws.saveSnapshot('initial', ws.allVars())
