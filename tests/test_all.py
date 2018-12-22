@@ -146,7 +146,7 @@ def test_fit_asimov():
     pdf = ws.obj('model')
     assert obs
     assert pdf
-    data_asimov = ROOT.RooStats.AsymptoticCalculator.GenerateAsimovData(pdf, obs)
+    data_asimov = countingworkspace.utils.generate_asimov(ws)
     pois = ws.obj('ModelConfig').GetParametersOfInterest()
     assert pois
 

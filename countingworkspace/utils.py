@@ -33,14 +33,9 @@ def get_free_variables(ws):
 
 
 def generate_asimov(ws):
-    all_obs_rooargset = ws.set('all_obs')
-    asimov = ROOT.RooDataSet('asimov', 'asimov', all_obs_rooargset)
-    ws.loadSnapshot('initial')
-    for obs, exp in zip(iter_collection(all_obs_rooargset),
-                        iter_collection(ws.set('all_exp'))):
-        obs.setVal(exp.getVal())
-    asimov.add(all_obs_rooargset)
-    return asimov
+    obs = ws.set('all_obs')
+    pdf = ws.obj('ModelConfig').GetPdf()
+    return ROOT.RooStats.AsymptoticCalculator.GenerateAsimovData(pdf, obs)
 
 
 def generate_toys(ws, ntoys=100):
