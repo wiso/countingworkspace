@@ -51,7 +51,6 @@ def test_create_variable_vector():
     assert(ws.var('zoo_three').getVal() == values[2])
 
 
-
 def test_create_expected_true():
     ws = ROOT.RooWorkspace()
     countingworkspace.create_variables(ws, 'lumi', values=10.)
@@ -147,7 +146,7 @@ def test_create_workspace():
             )
 
     all_nexp_cat = np.dot(EFFICIENCIES, NTRUE) + EXPECTED_BKG_CAT
-    
+
     for cat, nexp_cat in zip(range(NCATEGORIES), all_nexp_cat):
         v = ws.obj('nexp_cat{cat}'.format(cat=cat))
         assert(v)
@@ -171,7 +170,7 @@ def test_create_workspace_systematics_nsignal_gen():
             )
 
     all_nexp_cat = np.dot(EFFICIENCIES, NTRUE) + EXPECTED_BKG_CAT
-    
+
     for cat, nexp_cat in zip(range(NCATEGORIES), all_nexp_cat):
         v = ws.obj('nexp_cat{cat}'.format(cat=cat))
         assert(v)
@@ -180,7 +179,7 @@ def test_create_workspace_systematics_nsignal_gen():
 
     ws.var('theta_lumi').setVal(1)
     all_nexp_cat = np.dot(EFFICIENCIES, NTRUE * (1. + systematics_nsignal_gen)) + EXPECTED_BKG_CAT
-    
+
     for cat, nexp_cat in zip(range(NCATEGORIES), all_nexp_cat):
         v = ws.obj('nexp_cat{cat}'.format(cat=cat))
         assert(v)
@@ -189,13 +188,12 @@ def test_create_workspace_systematics_nsignal_gen():
 
     ws.var('theta_lumi').setVal(2)
     all_nexp_cat = np.dot(EFFICIENCIES, NTRUE * (1. + 2 * systematics_nsignal_gen)) + EXPECTED_BKG_CAT
-    
+
     for cat, nexp_cat in zip(range(NCATEGORIES), all_nexp_cat):
         v = ws.obj('nexp_cat{cat}'.format(cat=cat))
         assert(v)
         v1 = v.getVal()
         np.testing.assert_allclose(v1, nexp_cat)
-
 
 
 def test_asimov_roostats():

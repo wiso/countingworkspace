@@ -65,10 +65,10 @@ def create_variables(ws, expression, bins=None, values=None, ranges=None, index_
                 if len(values) != len(bins):
                     raise ValueError('size of bins (%d) and values (%d) is different' % (len(bins), len(values)))
                 for b, value in zip(bins, values):
-                    ws.factory(expression.format(**{index_name:b, 'value':value}))
+                    ws.factory(expression.format(**{index_name: b, 'value': value}))
             else:
                 for b in bins:
-                    ws.factory(expression.format(**{index_name:b}))   
+                    ws.factory(expression.format(**{index_name: b}))
     else:
         if bins is None and values is None:
             raise ValueError('need to specify bins and/or values')
@@ -86,10 +86,10 @@ def create_variables(ws, expression, bins=None, values=None, ranges=None, index_
 
         for b, value, (min_range, max_range) in zip(bins, values, ranges):
             if min_range is None and max_range is None:
-                ws.factory((expression + '[{value}]').format(**{index_name:b, 'value':value}))
+                ws.factory((expression + '[{value}]').format(**{index_name: b, 'value': value}))
             else:
-                ws.factory((expression + '[{value}, {m}, {M}]').format(**{index_name:b, 'value':value,
-                                                                          'm':min_range, 'M':max_range}))
+                ws.factory((expression + '[{value}, {m}, {M}]').format(**{index_name: b, 'value': value,
+                                                                          'm': min_range, 'M': max_range}))
 
 
 def create_efficiencies(ws, efficiencies, expression='eff_cat{cat}_proc{proc}',
