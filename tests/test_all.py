@@ -25,13 +25,40 @@ def test_create_variable_scalar():
     assert lumi2.getMax() == 20.
 
 
+def test_create_variable_vector():
+    ws = ROOT.RooWorkspace()
+    values = [1., 3., 10.]
+
+    countingworkspace.create_variables(ws, 'foo_{myindex}', values=values, index_name='myindex')
+    v = ws.allVars().selectByName('foo_*')
+    assert(v.getSize() == len(values))
+    for vv1, vv2 in zip(iter_collection(v), values):
+        assert(vv1 == vv2)
+
+    countingworkspace.create_variables(ws, 'bar_{myindex2}', values=values)
+    v = ws.allVars().selectByName('bar_*')
+    assert(v.getSize() == len(values))
+    for vv1, vv2 in zip(iter_collection(v), values):
+        assert(vv1 == vv2)
+
+    countingworkspace.create_variables(ws, 'zoo_{myindex2}', values=values, bins=['one', 'two', 'three'])
+    v = ws.allVars().selectByName('bar_*')
+    assert(v.getSize() == len(values))
+    for vv1, vv2 in zip(iter_collection(v), values):
+        assert(vv1 == vv2)
+    assert(ws.var('zoo_one').getVal() == values[0])
+    assert(ws.var('zoo_two').getVal() == values[1])
+    assert(ws.var('zoo_three').getVal() == values[2])
+
+
+
 def test_create_expected_true():
     ws = ROOT.RooWorkspace()
     countingworkspace.create_variables(ws, 'lumi', values=10.)
     assert ws.var('lumi')
     NPROC = 4
     xsvalues = np.arange(1, NPROC + 1)
-    countingworkspace.create_variables(ws, 'xsec_{index0}', bins=NPROC, values=xsvalues)
+    countingworkspace.create_variables(ws, 'xsec_{proc}', bins=NPROC, values=xsvalues)
     assert ws.allVars().getSize() == NPROC + 1
 
 
@@ -60,14 +87,18 @@ def test_create_formula():
     ws = ROOT.RooWorkspace()
     countingworkspace.create_variables(ws, 'a', values=10.)
     assert ws.var('a').getVal() == 10.
+    countingworkspace.create_variables(ws, 'theta', values=0., ranges=(-5, 5))
+    assert ws.var('theta').getVal() == 0.
+    assert ws.var('theta').getMin() == -5.
+    assert ws.var('theta').getMax() == 5.
     countingworkspace.create_variables(ws, 'prod:X(a, b[20])')
     assert ws.var('b').getVal() == 20.
     assert ws.obj('X').getVal() == 10. * 20.
 
     NPROC = 4
     xsvalues = np.arange(1, NPROC + 1)
-    countingworkspace.create_variables(ws, 'xsec_{index0}', bins=NPROC, values=xsvalues)
-    countingworkspace.create_variables(ws, 'prod:ntrue_{index0}(lumi[100], xsec_{index0})', bins=NPROC)
+    countingworkspace.create_variables(ws, 'xsec_{proc}', bins=NPROC, values=xsvalues)
+    countingworkspace.create_variables(ws, 'prod:ntrue_{proc}(lumi[100], xsec_{proc})', bins=NPROC)
     assert ws.obj('ntrue_0').getVal() == 100 * 1
     assert ws.obj('ntrue_1').getVal() == 100 * 2
     assert ws.obj('ntrue_2').getVal() == 100 * 3
@@ -108,12 +139,64 @@ def test_create_workspace():
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
 
     assert ws
-    for ncat in range(NCATEGORIES):
+    for cat in range(NCATEGORIES):
         for nproc in range(NPROCESS):
             np.testing.assert_allclose(
-                ws.var("eff_cat%d_proc%d" % (ncat, nproc)).getVal(),
-                EFFICIENCIES[ncat][nproc],
+                ws.var("eff_cat%d_proc%d" % (cat, nproc)).getVal(),
+                EFFICIENCIES[cat][nproc],
             )
+
+    all_nexp_cat = np.dot(EFFICIENCIES, NTRUE) + EXPECTED_BKG_CAT
+    
+    for cat, nexp_cat in zip(range(NCATEGORIES), all_nexp_cat):
+        v = ws.obj('nexp_cat{cat}'.format(cat=cat))
+        assert(v)
+        v1 = v.getVal()
+        np.testing.assert_allclose(v1, nexp_cat)
+
+
+def test_create_workspace_systematics_nsignal_gen():
+    systematics_nsignal_gen = np.ones(NPROCESS) * 0.01
+    systematics_nsignal_gen[0] *= 2
+
+    ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT,
+                          systematics_nsignal_gen=[{'name': 'lumi', 'values': systematics_nsignal_gen}])
+
+    assert ws
+    for cat in range(NCATEGORIES):
+        for nproc in range(NPROCESS):
+            np.testing.assert_allclose(
+                ws.var("eff_cat%d_proc%d" % (cat, nproc)).getVal(),
+                EFFICIENCIES[cat][nproc],
+            )
+
+    all_nexp_cat = np.dot(EFFICIENCIES, NTRUE) + EXPECTED_BKG_CAT
+    
+    for cat, nexp_cat in zip(range(NCATEGORIES), all_nexp_cat):
+        v = ws.obj('nexp_cat{cat}'.format(cat=cat))
+        assert(v)
+        v1 = v.getVal()
+        np.testing.assert_allclose(v1, nexp_cat)
+
+    ws.var('theta_lumi').setVal(1)
+    all_nexp_cat = np.dot(EFFICIENCIES, NTRUE * (1. + systematics_nsignal_gen)) + EXPECTED_BKG_CAT
+    
+    for cat, nexp_cat in zip(range(NCATEGORIES), all_nexp_cat):
+        v = ws.obj('nexp_cat{cat}'.format(cat=cat))
+        assert(v)
+        v1 = v.getVal()
+        np.testing.assert_allclose(v1, nexp_cat)
+
+    ws.var('theta_lumi').setVal(2)
+    all_nexp_cat = np.dot(EFFICIENCIES, NTRUE * (1. + 2 * systematics_nsignal_gen)) + EXPECTED_BKG_CAT
+    
+    for cat, nexp_cat in zip(range(NCATEGORIES), all_nexp_cat):
+        v = ws.obj('nexp_cat{cat}'.format(cat=cat))
+        assert(v)
+        v1 = v.getVal()
+        np.testing.assert_allclose(v1, nexp_cat)
+
+
 
 def test_asimov_roostats():
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
@@ -177,53 +260,53 @@ def test_create_workspace_luminosity():
     # workspace where nsignal_gen[p] = xsec[p] * lumi
     ws_with_lumi = ROOT.RooWorkspace()
     ws_with_lumi.factory('lumi[%f]' % LUMI)
-    countingworkspace.create_variables(ws_with_lumi, 'xsec_{index0}',
+    countingworkspace.create_variables(ws_with_lumi, 'xsec_{proc}',
                                        bins=NPROCESS,
                                        values=XSECFID_X_BR_PRODUCTION_MODES,
                                        ranges=[-1000, 10000])
 
     create_workspace(NCATEGORIES, NPROCESS, None, EFFICIENCIES, EXPECTED_BKG_CAT,
-                     expression_nsignal_gen='prod:nsignal_gen_proc{index0}(lumi, xsec_{index0})',
+                     expression_nsignal_gen='prod:nsignal_gen_proc{proc}(lumi, xsec_{proc})',
                      ws=ws_with_lumi)
 
     # workspace where nsignal_gen[p] = mu[p] * xsec[p] * lumi
     ws_with_4mu = ROOT.RooWorkspace()
     ws_with_4mu.factory('lumi[%f]' % LUMI)
-    countingworkspace.create_variables(ws_with_4mu, 'xsec_{index0}',
+    countingworkspace.create_variables(ws_with_4mu, 'xsec_{proc}',
                                        bins=NPROCESS,
                                        values=XSECFID_X_BR_PRODUCTION_MODES)
     create_workspace(NCATEGORIES, NPROCESS, None, EFFICIENCIES, EXPECTED_BKG_CAT,
-                     expression_nsignal_gen='prod:nsignal_gen_proc{index0}(mu_{index0}[1, -4, 5], lumi, xsec_{index0})',
+                     expression_nsignal_gen='prod:nsignal_gen_proc{proc}(mu_{proc}[1, -4, 5], lumi, xsec_{proc})',
                      ws=ws_with_4mu)
 
     # workspace where nsignal_gen[p] = mu * mu[p] * xsec[p] * lumi
     # where true yield is created externally
     ws_with_4mu_x_mu = ROOT.RooWorkspace()
     ws_with_4mu_x_mu.factory('lumi[%f]' % LUMI)
-    countingworkspace.create_variables(ws_with_4mu_x_mu, 'xsec_{index0}',
+    countingworkspace.create_variables(ws_with_4mu_x_mu, 'xsec_{proc}',
                                        bins=NPROCESS,
                                        values=XSECFID_X_BR_PRODUCTION_MODES)
     countingworkspace.create_variables(ws_with_4mu_x_mu,
-                                       'prod:nsignal_gen_proc{index0}(mu[1, -4, 5], mu_{index0}[1, -4, 5], lumi, xsec_{index0})',
+                                       'prod:nsignal_gen_proc{proc}(mu[1, -4, 5], mu_{proc}[1, -4, 5], lumi, xsec_{proc})',
                                        bins=NPROCESS)
 
     create_workspace(NCATEGORIES, NPROCESS, None, EFFICIENCIES, EXPECTED_BKG_CAT,
-                     expression_nsignal_gen='nsignal_gen_proc{index0}',
+                     expression_nsignal_gen='nsignal_gen_proc{proc}',
                      ws=ws_with_4mu_x_mu)
 
     # same, but with names
     ws_with_4mu_x_mu_names = ROOT.RooWorkspace()
     ws_with_4mu_x_mu_names.factory('lumi[%f]' % LUMI)
-    countingworkspace.create_variables(ws_with_4mu_x_mu_names, 'xsec_{index0}',
+    countingworkspace.create_variables(ws_with_4mu_x_mu_names, 'xsec_{proc}',
                                        bins=list(map(str, range(NPROCESS))),
                                        values=XSECFID_X_BR_PRODUCTION_MODES)
     countingworkspace.create_variables(ws_with_4mu_x_mu_names,
-                                       'prod:nsignal_gen_proc{index0}(mu[1, -4, 5], mu_{index0}[1, -4, 5], lumi, xsec_{index0})',
+                                       'prod:nsignal_gen_proc{proc}(mu[1, -4, 5], mu_{proc}[1, -4, 5], lumi, xsec_{proc})',
                                        bins=list(map(str, range(NPROCESS))))
 
     create_workspace(list(map(str, range(NCATEGORIES))),
                      list(map(str, range(NPROCESS))), None, EFFICIENCIES, EXPECTED_BKG_CAT,
-                     expression_nsignal_gen='nsignal_gen_proc{index0}',
+                     expression_nsignal_gen='nsignal_gen_proc{proc}',
                      ws=ws_with_4mu_x_mu_names)
 
     # nominal workspace for reference
