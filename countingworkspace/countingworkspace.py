@@ -237,7 +237,19 @@ def create_workspace(categories, processes,
         create_variables(ws, 'prod:%s(%s, %s)' % (expression_nsignal_gen_with_sys, expression_nsignal_gen, sysnames_joint), bins=processes)
     create_variables(ws, expression_nexpected_bkg_cat, categories, nexpected_bkg_cat)
     create_expected_number_of_signal_events(ws, categories, processes, expression_nsignal_gen=expression_nsignal_gen_with_sys)
-    create_model(ws, categories, processes)
+
+    all_constrains = ROOT.RooArgSet()
+    for sysname in sysnames:
+        _ = ws.factory('RooGaussian:constrain_sys{sysname}(global_{sysname}[0, -5, 5], theta_{sysname}, 1)'.format(sysname=sysname))
+        all_constrains.add(_)
+    ws.defineSet('constrains', all_constrains)
+    ws.factory('PROD:prod_constrains(%s)' % ','.join([v.GetName() for v in utils.iter_collection(all_constrains)]))
+
+    if sysnames:
+        create_model(ws, categories, processes, expression_model='model_nosys')
+        ws.factory('PROD:model(model_nosys, prod_constrains)')
+    else:
+        create_model(ws, categories, processes)
     ws.saveSnapshot('initial', ws.allVars())
 
     model_config = ROOT.RooStats.ModelConfig('ModelConfig', ws)
