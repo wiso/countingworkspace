@@ -214,6 +214,7 @@ def create_workspace(categories, processes,
         raise ValueError('shape of efficiencies should match (ncategories, nprocess) = ()%d, %d)' % (ncat, nproc))
 
     ws = ws or ROOT.RooWorkspace()
+    all_nuisances = ROOT.RooArgSet()
     create_observed_number_of_events(ws, categories, expression=expression_nobs_cat)
     create_efficiencies(ws, efficiencies, expression=expression_efficiency, bins_proc=processes, bins_cat=categories)
     # create the number of signal event at true level, only if they are not all present
@@ -226,6 +227,7 @@ def create_workspace(categories, processes,
             sysname = sys_info['name']
             if sysname not in sysnames:
                 create_variables(ws, 'theta_{sysname}'.format(sysname=sysname), values=0, ranges=(-5, 5))
+                all_nuisances.add(ws.var('theta_{sysname}'.format(sysname=sysname)))
             sysnames.add(sysname)
             sysvalues = sys_info['values']
             if len(sysvalues) != nproc:
@@ -239,6 +241,7 @@ def create_workspace(categories, processes,
     create_expected_number_of_signal_events(ws, categories, processes, expression_nsignal_gen=expression_nsignal_gen_with_sys)
 
     all_constrains = ROOT.RooArgSet()
+
     all_globals = ROOT.RooArgSet()
     for sysname in sysnames:
         global_obs = ws.factory('global_{sysname}[0, -5, 5]'.format(sysname=sysname))
@@ -259,7 +262,10 @@ def create_workspace(categories, processes,
     model_config = ROOT.RooStats.ModelConfig('ModelConfig', ws)
     model_config.SetPdf('model')
     model_config.SetObservables(ws.set('all_obs'))
+    model_config.SetNuisanceParameters(all_nuisances)
+    model_config.SetGlobalObservables(all_globals)
     poi = utils.get_free_variables(ws)
+    poi.remove(all_nuisances)
     model_config.SetParametersOfInterest(poi)
     getattr(ws, 'import')(model_config)
 

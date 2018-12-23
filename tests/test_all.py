@@ -245,9 +245,14 @@ def test_fit_asimov():
 def test_fit_asimov_syst():
     systematics_nsignal_gen = np.ones(NPROCESS) * 0.05
     systematics_nsignal_gen[0] *= 2
+    systematics_nsignal_gen2 = np.ones(NPROCESS) * 0.06
+    systematics_nsignal_gen2[1] *= 2
+
 
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT,
-                          systematics_nsignal_gen=[{'name': 'lumi', 'values': systematics_nsignal_gen}])
+                          systematics_nsignal_gen=[{'name': 'lumi', 'values': systematics_nsignal_gen},
+                                                   {'name': 'lumi2', 'values': systematics_nsignal_gen2}
+                          ])
 
     obs = ws.set('all_obs')
     pdf = ws.obj('model')
@@ -283,7 +288,7 @@ def test_fit_asimov_syst():
         all_errors_stat.append(poi_fitted.getError())    
 
     sys_only_errors = (np.sqrt(np.array(all_errors)**2 - np.array(all_errors_stat)**2) / NTRUE)
-    np.testing.assert_allclose(sys_only_errors, systematics_nsignal_gen, rtol=2E-2)
+    np.testing.assert_allclose(sys_only_errors, np.sqrt(systematics_nsignal_gen**2 + systematics_nsignal_gen2**2), rtol=5E-2)
 
 def test_create_workspace_raise():
     with pytest.raises(ValueError):
