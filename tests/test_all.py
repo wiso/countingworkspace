@@ -242,6 +242,49 @@ def test_fit_asimov():
         np.testing.assert_allclose(ntrue, poi_fitted.getVal(), rtol=0.002)
 
 
+def test_fit_asimov_syst():
+    systematics_nsignal_gen = np.ones(NPROCESS) * 0.05
+    systematics_nsignal_gen[0] *= 2
+
+    ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT,
+                          systematics_nsignal_gen=[{'name': 'lumi', 'values': systematics_nsignal_gen}])
+
+    obs = ws.set('all_obs')
+    pdf = ws.obj('model')
+    assert obs
+    assert pdf
+    data_asimov = countingworkspace.utils.generate_asimov(ws)
+    pois = ws.obj('ModelConfig').GetParametersOfInterest()
+    assert pois
+
+    # not start the fit from the true values
+    for poi in iter_collection(pois):
+        poi.setVal(poi.getVal() * 1.1)
+
+    fr = pdf.fitTo(data_asimov, ROOT.RooFit.Save(), ROOT.RooFit.Hesse(True))
+    assert(fr.status() == 0)
+    pois_fitted = fr.floatParsFinal()
+    all_errors = []
+    for ntrue, poi_fitted in zip(NTRUE, iter_collection(pois_fitted)):
+        np.testing.assert_allclose(ntrue, poi_fitted.getVal(), rtol=0.002)
+        all_errors.append(poi_fitted.getError())
+
+    ws.loadSnapshot('initial')
+    for theta in iter_collection(ws.allVars().selectByName('theta*')):
+        theta.setVal(0)
+        theta.setConstant()
+
+    fr = pdf.fitTo(data_asimov, ROOT.RooFit.Save(), ROOT.RooFit.Hesse(True))
+    assert(fr.status() == 0)
+    pois_fitted = fr.floatParsFinal()
+    all_errors_stat = []
+    for ntrue, poi_fitted in zip(NTRUE, iter_collection(pois_fitted)):
+        np.testing.assert_allclose(ntrue, poi_fitted.getVal(), rtol=0.002)
+        all_errors_stat.append(poi_fitted.getError())    
+
+    sys_only_errors = (np.sqrt(np.array(all_errors)**2 - np.array(all_errors_stat)**2) / NTRUE)
+    np.testing.assert_allclose(sys_only_errors, systematics_nsignal_gen, rtol=2E-2)
+
 def test_create_workspace_raise():
     with pytest.raises(ValueError):
         create_workspace(

@@ -239,9 +239,13 @@ def create_workspace(categories, processes,
     create_expected_number_of_signal_events(ws, categories, processes, expression_nsignal_gen=expression_nsignal_gen_with_sys)
 
     all_constrains = ROOT.RooArgSet()
+    all_globals = ROOT.RooArgSet()
     for sysname in sysnames:
-        _ = ws.factory('RooGaussian:constrain_sys{sysname}(global_{sysname}[0, -5, 5], theta_{sysname}, 1)'.format(sysname=sysname))
+        global_obs = ws.factory('global_{sysname}[0, -5, 5]'.format(sysname=sysname))
+        global_obs.setConstant()
+        _ = ws.factory('RooGaussian:constrain_sys{sysname}(global_{sysname}, theta_{sysname}, 1)'.format(sysname=sysname))
         all_constrains.add(_)
+        all_globals.add(global_obs)
     ws.defineSet('constrains', all_constrains)
     ws.factory('PROD:prod_constrains(%s)' % ','.join([v.GetName() for v in utils.iter_collection(all_constrains)]))
 
