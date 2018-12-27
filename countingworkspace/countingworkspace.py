@@ -1,14 +1,15 @@
 import ROOT
 import numpy as np
 import logging
+import string
 from itertools import product
 from . import utils
 logging.basicConfig(level=logging.INFO)
 
 
 def string_range(n):
-    if type(n) is not int or n < 0:
-        raise ValueError("parameters should be a non-negative integer")
+    if not np.issubdtype(type(n), np.integer) or n < 0:
+        raise ValueError("parameter %s of type %s should be a non-negative integer" % (n, type(n)))
     return [str(nn) for nn in range(n)]
 
 
@@ -36,41 +37,101 @@ def create_observed_number_of_events(ws, bins_cat, expression='nobs_cat{cat}', n
     ws.defineSet('all_obs', all_obs)
 
 
-def create_variables(ws, expression, bins=None, values=None, ranges=None):
+def create_scalar(ws, expression, value=None, ranges=None):
     is_formula = ':' in expression
 
-    if type(bins) is int:
-        bins = string_range(bins)
-
-    if is_formula:
-        if values is not None:
-            raise ValueError('cannot specify values for formula %s' % expression)
-        if bins is None:
-            ws.factory(expression)
-        else:
-            for b in bins:
-                ws.factory(expression.format(index0=b))
-    else:
-        if bins is None and values is None:
-            raise ValueError('need to specify bins and/or values')
-        if values is None:
-            values = np.zeros(len(bins))
-        values = np.atleast_1d(values)
-        if bins is None:
-            bins = string_range(len(values))
-
+    if ranges is not None and len(ranges) != 2:
+        raise ValueError('size of ranges must be 2')
+    if not is_formula and value is None:
+        raise ValueError('you should specify a value for expression %s' % expression)
+    if is_formula and ranges is not None:
+        raise ValueError('cannot specify range for formula in expression %s' % expression)
+    if not is_formula:
         if ranges is None:
-            ranges = None, None
-        ranges = np.asarray(ranges)
-        if ranges.shape == (2, ):
-            ranges = ((ranges[0], ranges[1]),) * len(bins)
+            return ws.factory('{expression}[{value}]'.format(expression=expression, value=value))
+        else:
+            return ws.factory('{expression}[{value},{down},{up}]'.format(expression=expression, value=value, down=ranges[0], up=ranges[1]))
+    else:
+        if value is not None:
+            return ws.factory(expression.format(value=value))
+        else:
+            return ws.factory(expression)
 
-        for b, value, (min_range, max_range) in zip(bins, values, ranges):
-            if min_range is None and max_range is None:
-                ws.factory((expression + '[{value}]').format(index0=b, value=value))
-            else:
-                ws.factory((expression + '[{value}, {m}, {M}]').format(index0=b, value=value,
-                                                                       m=min_range, M=max_range))
+
+def create_variables(ws, expression, nbins=None, bins=None, values=None, ranges=None, index_names=None):
+
+    if nbins is not None:
+        nbins = np.atleast_1d(nbins)
+
+    if bins is not None:
+        if type(bins[0]) != list and type(bins[0]) != tuple:
+            bins = [bins]
+
+    if values is not None:
+        values = np.atleast_1d(values)
+
+    if ranges is not None:
+        ranges = np.atleast_1d(ranges)
+
+    if np.iterable(values) and nbins is None:
+        nbins = np.shape(values)
+
+    if bins is not None and nbins is None:
+        nbins = [len(b) for b in bins]
+
+    if nbins is not None and bins is None:
+        bins = [string_range(nb) for nb in nbins]
+
+    if nbins is not None and bins is not None:
+        if [len(b) for b in bins] != list(nbins):
+            raise ValueError('nbins=%s and bins=%s does not match' % (nbins, bins))
+
+    if nbins is None or nbins == (1, ):
+        return create_scalar(ws, expression, None if values is None else values[0], ranges)
+
+    if values is not None and values.shape != nbins:
+        raise ValueError('values has wrong shape, should be %s, it is %s' % (nbins, values.shape))
+
+    index_names = np.atleast_1d(index_names)
+    logging.debug('after normalizations inputs are: expression=%s, nbins=%s, bins=%s, values=%s, ranges=%s, index_names=%s',
+                   expression, nbins, bins, values, ranges, index_names)
+
+    if np.sum([b != 1 for b in nbins]) != np.sum([idx is not None for idx in index_names]):
+        logging.debug('trying to determine indexes in expression %s', expression)
+        possible_indexes = set([tup[1] for tup in string.Formatter().parse(expression) if tup[1] is not None])
+        if values is not None:
+            if 'value' in possible_indexes:
+                possible_indexes.remove('value')
+        if len(possible_indexes) == 0:
+            raise ValueError('there is no index in expression %s' % expression)
+        if len(possible_indexes) != 1:
+            raise ValueError('cannot determine which index to use in expression %s, possible indexes: %s' % (expression, possible_indexes))
+        index_names = list(possible_indexes)
+        logging.debug('index_names = %s', index_names)
+
+    
+    if len(nbins) == 1:
+        results = []
+        if values is None:
+            for b in bins[0]:
+                results.append(create_variables(ws, expression.format(**{index_names[0]:b})))
+        else:
+            for v, b in zip(values, bins[0]):
+                results.append(create_variables(ws, expression.format(**{index_names[0]:b, 'value':'{value}'}), values=v, ranges=ranges))
+        return results
+    else:
+        if len(index_names) != len(nbins):
+            raise ValueError('cannot find all the index')
+        results = []
+        if values is None:
+            for ib, b in enumerate(bins[0]):
+                logging.debug('calling with expression=%s, bins=%s', expression.replace('{%s}' % index_names[0], b), bins[1:])
+                results.append(create_variables(ws, expression.replace('{%s}' % index_names[0], b), bins=bins[1:]))
+        else:            
+            for ib, b in enumerate(bins[0]):
+                logging.debug('calling with expression=%s, values=%s, bins=%s', expression.replace('{%s}' % index_names[0], b), values[ib, :], bins[1:])
+                results.append(create_variables(ws, expression.replace('{%s}' % index_names[0], b), values=values[ib, :], bins=bins[1:]))
+        return results
 
 
 def create_efficiencies(ws, efficiencies, expression='eff_cat{cat}_proc{proc}',
@@ -92,7 +153,10 @@ def create_efficiencies(ws, efficiencies, expression='eff_cat{cat}_proc{proc}',
 
 
 def create_expected_number_of_signal_events(ws, bins_cat, bins_proc,
-                                            expression_nexp='prod:nexp_signal_cat{cat}_proc{proc}(nsignal_gen_proc{proc}, eff_cat{cat}_proc{proc})'):
+                                            expression_nsignal_gen='nsignal_gen_proc{proc}_with_sys',
+                                            expression_efficiency='eff_cat{cat}_proc{proc}',
+                                            expression_nexp='nexp_signal_cat{cat}_proc{proc}'):
+    expression = 'prod:%s(%s, %s)' % (expression_nexp, expression_nsignal_gen, expression_efficiency)
     if type(bins_cat) is int:
         bins_cat = string_range(bins_cat)
     if type(bins_proc) is int:
@@ -102,7 +166,7 @@ def create_expected_number_of_signal_events(ws, bins_cat, bins_proc,
     all_expected = ROOT.RooArgSet()
     for cat, proc in product(bins_cat, bins_proc):
         # expected events for given category and process
-        all_expected.add(ws.factory(expression_nexp.format(cat=cat, proc=proc)))
+        all_expected.add(ws.factory(expression.format(cat=cat, proc=proc)))
     all_expected.setName('all_expected')
     ws.defineSet('all_signal_expected', all_expected)
 
@@ -169,10 +233,15 @@ def create_workspace(categories, processes,
                      nsignal_gen=None,
                      efficiencies=None,
                      nexpected_bkg_cat=None,
+                     systematics_nsignal_gen=None,
+                     systematic_efficiencies=None,
                      expression_nobs_cat='nobs_cat{cat}',
+                     expression_nsignal_gen='nsignal_gen_proc{proc}',
+                     expression_nsignal_gen_with_sys='nsignal_gen_proc{proc}_with_sys',
                      expression_efficiency='eff_cat{cat}_proc{proc}',
-                     expression_nsignal_gen='nsignal_gen_proc{index0}',
-                     expression_nexpected_bkg_cat='nexp_bkg_cat{index0}',
+                     expression_efficiency_with_sys='eff_cat{cat}_proc{proc}_with_sys',
+                     expression_nexpected_bkg_cat='nexp_bkg_cat{cat}',
+                     name_constrain='constrain_sys{sysname}',
                      ws=None):
     if type(categories) is int:
         categories = string_range(categories)
@@ -183,26 +252,85 @@ def create_workspace(categories, processes,
 
     nproc = len(processes)
     ncat = len(categories)
+    sysnames = set()
 
     efficiencies = np.asarray(efficiencies)
     if efficiencies.shape != (len(categories), len(processes)):
         raise ValueError('shape of efficiencies should match (ncategories, nprocess) = ()%d, %d)' % (ncat, nproc))
 
     ws = ws or ROOT.RooWorkspace()
+    all_nuisances = ROOT.RooArgSet()
     create_observed_number_of_events(ws, categories, expression=expression_nobs_cat)
     create_efficiencies(ws, efficiencies, expression=expression_efficiency, bins_proc=processes, bins_cat=categories)
+    if systematic_efficiencies is None:
+        expression_efficiency_with_sys = expression_efficiency
+    else:
+        for sys_info in systematic_efficiencies:
+            sysname = sys_info['name']
+            if sysname not in sysnames:
+                create_variables(ws, 'theta_{sysname}'.format(sysname=sysname), values=0, ranges=(-5, 5))
+                all_nuisances.add(ws.var('theta_{sysname}'.format(sysname=sysname)))
+            sysnames.add(sysname)
+            sysvalues = np.asarray(sys_info['values'])
+            if sysvalues.shape != (len(categories), len(processes)):
+                raise ValueError('shape of efficiency systematic %s should match (ncategories, nprocess) = (%d, %d))' % (sysname, ncat, nproc))
+            expression_response = 'expr:response_sys{sysname}_efficiency_cat{{cat}}_proc{{proc}}("1 + @0 * @1", sigma_{sysname}_efficiency_cat{{cat}}_proc{{proc}}[{{value}}], theta_{sysname})'.format(sysname=sysname)
+            create_variables(ws, expression_response, bins=(categories, processes), values=sysvalues, index_names=('cat', 'proc'))
+        sysnames_joint = ','.join(['response_sys{sysname}_efficiency_cat{{cat}}_proc{{proc}}'.format(sysname=sys_info['name'])
+                                    for sys_info in systematic_efficiencies])
+        create_variables(ws, 'prod:%s(%s, %s)' % (expression_efficiency_with_sys, expression_efficiency, sysnames_joint),
+                         bins=(categories, processes), index_names=('cat', 'proc'))
     # create the number of signal event at true level, only if they are not all present
-    if not all(ws.obj(expression_nsignal_gen.format(index0=icat)) for icat in range(nproc)):
-        create_variables(ws, expression_nsignal_gen, processes, nsignal_gen, (-10000, 50000))
-    create_variables(ws, expression_nexpected_bkg_cat, categories, nexpected_bkg_cat)
-    create_expected_number_of_signal_events(ws, categories, processes)
-    create_model(ws, categories, processes)
+    if not all(ws.obj(expression_nsignal_gen.format(proc=proc)) for proc in processes):
+        create_variables(ws, expression_nsignal_gen, bins=processes, values=nsignal_gen, ranges=(-10000, 50000))
+    if systematics_nsignal_gen is None:
+        expression_nsignal_gen_with_sys = expression_nsignal_gen
+    else:
+        for sys_info in systematics_nsignal_gen:
+            sysname = sys_info['name']
+            if sysname not in sysnames:
+                create_variables(ws, 'theta_{sysname}'.format(sysname=sysname), values=0, ranges=(-5, 5))
+                all_nuisances.add(ws.var('theta_{sysname}'.format(sysname=sysname)))
+            sysnames.add(sysname)
+            sysvalues = sys_info['values']
+            if len(sysvalues) != nproc:
+                raise ValueError('size of values for systematics {sysname} is different from the number of processes ({nproc})'.format(sysname=sysname, ncat=nproc))
+            expression_response = 'expr:response_sys{sysname}_nprod_proc{{proc}}("1 + @0 * @1", sigma_{sysname}_nprod_proc{{proc}}[{{value}}], theta_{sysname})'.format(sysname=sysname)
+            create_variables(ws, expression_response, bins=processes, values=sysvalues)
+        sysnames_joint = ','.join(['response_sys{sysname}_nprod_proc{{proc}}'.format(sysname=sys_info['name'])
+                                    for sys_info in systematics_nsignal_gen])
+        create_variables(ws, 'prod:%s(%s, %s)' % (expression_nsignal_gen_with_sys, expression_nsignal_gen, sysnames_joint), bins=processes)
+    create_variables(ws, expression_nexpected_bkg_cat, bins=categories, values=nexpected_bkg_cat)
+    create_expected_number_of_signal_events(ws, categories, processes,
+                                            expression_efficiency=expression_efficiency_with_sys,
+                                            expression_nsignal_gen=expression_nsignal_gen_with_sys)
+
+    all_constrains = ROOT.RooArgSet()
+    all_globals = ROOT.RooArgSet()
+    for sysname in sysnames:
+        global_obs = ws.factory('global_{sysname}[0, -5, 5]'.format(sysname=sysname))
+        global_obs.setConstant()
+        nc = name_constrain.format(sysname=sysname)
+        _ = ws.factory('RooGaussian:{name}(global_{sysname}, theta_{sysname}, 1)'.format(sysname=sysname, name=nc))
+        all_constrains.add(_)
+        all_globals.add(global_obs)
+    ws.defineSet('constrains', all_constrains)
+    ws.factory('PROD:prod_constrains(%s)' % ','.join([v.GetName() for v in utils.iter_collection(all_constrains)]))
+
+    if sysnames:
+        create_model(ws, categories, processes, expression_model='model_nosys')
+        ws.factory('PROD:model(model_nosys, prod_constrains)')
+    else:
+        create_model(ws, categories, processes)
     ws.saveSnapshot('initial', ws.allVars())
 
     model_config = ROOT.RooStats.ModelConfig('ModelConfig', ws)
     model_config.SetPdf('model')
     model_config.SetObservables(ws.set('all_obs'))
+    model_config.SetNuisanceParameters(all_nuisances)
+    model_config.SetGlobalObservables(all_globals)
     poi = utils.get_free_variables(ws)
+    poi.remove(all_nuisances)
     model_config.SetParametersOfInterest(poi)
     getattr(ws, 'import')(model_config)
 
