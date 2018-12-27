@@ -50,7 +50,9 @@ def create_scalar(ws, expression, value=None, ranges=None):
         if ranges is None:
             return ws.factory('{expression}[{value}]'.format(expression=expression, value=value))
         else:
-            return ws.factory('{expression}[{value},{down},{up}]'.format(expression=expression, value=value, down=ranges[0], up=ranges[1]))
+            return ws.factory('{expression}[{value},{down},{up}]'.format(expression=expression,
+                                                                         value=value, down=ranges[0],
+                                                                         up=ranges[1]))
     else:
         if value is not None:
             return ws.factory(expression.format(value=value))
@@ -94,7 +96,7 @@ def create_variables(ws, expression, nbins=None, bins=None, values=None, ranges=
 
     index_names = np.atleast_1d(index_names)
     logging.debug('after normalizations inputs are: expression=%s, nbins=%s, bins=%s, values=%s, ranges=%s, index_names=%s',
-                   expression, nbins, bins, values, ranges, index_names)
+                  expression, nbins, bins, values, ranges, index_names)
 
     if np.sum([b != 1 for b in nbins]) != np.sum([idx is not None for idx in index_names]):
         logging.debug('trying to determine indexes in expression %s', expression)
@@ -109,15 +111,14 @@ def create_variables(ws, expression, nbins=None, bins=None, values=None, ranges=
         index_names = list(possible_indexes)
         logging.debug('index_names = %s', index_names)
 
-    
     if len(nbins) == 1:
         results = []
         if values is None:
             for b in bins[0]:
-                results.append(create_variables(ws, expression.format(**{index_names[0]:b})))
+                results.append(create_variables(ws, expression.format(**{index_names[0]: b})))
         else:
             for v, b in zip(values, bins[0]):
-                results.append(create_variables(ws, expression.format(**{index_names[0]:b, 'value':'{value}'}), values=v, ranges=ranges))
+                results.append(create_variables(ws, expression.format(**{index_names[0]: b, 'value': '{value}'}), values=v, ranges=ranges))
         return results
     else:
         if len(index_names) != len(nbins):
@@ -127,7 +128,7 @@ def create_variables(ws, expression, nbins=None, bins=None, values=None, ranges=
             for ib, b in enumerate(bins[0]):
                 logging.debug('calling with expression=%s, bins=%s', expression.replace('{%s}' % index_names[0], b), bins[1:])
                 results.append(create_variables(ws, expression.replace('{%s}' % index_names[0], b), bins=bins[1:]))
-        else:            
+        else:
             for ib, b in enumerate(bins[0]):
                 logging.debug('calling with expression=%s, values=%s, bins=%s', expression.replace('{%s}' % index_names[0], b), values[ib, :], bins[1:])
                 results.append(create_variables(ws, expression.replace('{%s}' % index_names[0], b), values=values[ib, :], bins=bins[1:]))
@@ -277,7 +278,7 @@ def create_workspace(categories, processes,
             expression_response = 'expr:response_sys{sysname}_efficiency_cat{{cat}}_proc{{proc}}("1 + @0 * @1", sigma_{sysname}_efficiency_cat{{cat}}_proc{{proc}}[{{value}}], theta_{sysname})'.format(sysname=sysname)
             create_variables(ws, expression_response, bins=(categories, processes), values=sysvalues, index_names=('cat', 'proc'))
         sysnames_joint = ','.join(['response_sys{sysname}_efficiency_cat{{cat}}_proc{{proc}}'.format(sysname=sys_info['name'])
-                                    for sys_info in systematic_efficiencies])
+                                   for sys_info in systematic_efficiencies])
         create_variables(ws, 'prod:%s(%s, %s)' % (expression_efficiency_with_sys, expression_efficiency, sysnames_joint),
                          bins=(categories, processes), index_names=('cat', 'proc'))
     # create the number of signal event at true level, only if they are not all present
@@ -298,7 +299,7 @@ def create_workspace(categories, processes,
             expression_response = 'expr:response_sys{sysname}_nprod_proc{{proc}}("1 + @0 * @1", sigma_{sysname}_nprod_proc{{proc}}[{{value}}], theta_{sysname})'.format(sysname=sysname)
             create_variables(ws, expression_response, bins=processes, values=sysvalues)
         sysnames_joint = ','.join(['response_sys{sysname}_nprod_proc{{proc}}'.format(sysname=sys_info['name'])
-                                    for sys_info in systematics_nsignal_gen])
+                                   for sys_info in systematics_nsignal_gen])
         create_variables(ws, 'prod:%s(%s, %s)' % (expression_nsignal_gen_with_sys, expression_nsignal_gen, sysnames_joint), bins=processes)
     create_variables(ws, expression_nexpected_bkg_cat, bins=categories, values=nexpected_bkg_cat)
     create_expected_number_of_signal_events(ws, categories, processes,

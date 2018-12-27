@@ -51,7 +51,6 @@ def test_create_variable_scalar():
     assert lumi2.getMin() == 1.
     assert lumi2.getMax() == 20.
 
-
     countingworkspace.create_variables(ws, 'theta', values=0, ranges=(-5, 5))
     theta = ws.var('theta')
     assert theta
@@ -72,7 +71,6 @@ def test_create_variable_vector():
     for vv1, vv2, rr in zip(iter_collection(v), values, r):
         assert (vv1.getVal() == vv2)
         assert (rr.getVal() == vv2)
-
 
     countingworkspace.create_variables(ws, 'bar_{myindex2}', values=values)
     v = ws.allVars().selectByName('bar_*')
@@ -103,7 +101,6 @@ def test_create_variable_vector():
         x = ws.var('x_%s' % b)
         assert x
         np.testing.assert_allclose(x.getVal(), v)
-
 
 
 def test_create_variable_matrix():
@@ -239,7 +236,7 @@ def test_create_workspace():
     assert obs
     assert obs.getSize() == NCATEGORIES
     poi = model_config.GetParametersOfInterest()
-    assert poi    
+    assert poi
     assert poi.getSize() == NPROCESS
 
 
@@ -285,7 +282,6 @@ def test_create_workspace_systematics_nsignal_gen():
         np.testing.assert_allclose(v1, nexp_cat)
 
 
-
 def test_create_workspace_systematics_efficiencies():
     systematics_efficiencies = np.ones_like(EFFICIENCIES) * 0.01
     systematics_efficiencies[0] *= 2
@@ -319,7 +315,6 @@ def test_create_workspace_systematics_efficiencies():
 
     constrain = ws.pdf('constrain_syslumi')
     assert constrain
-
 
 
 def test_asimov_roostats():
@@ -376,11 +371,9 @@ def test_fit_asimov_syst():
     systematics_nsignal_gen2 = np.ones(NPROCESS) * 0.06
     systematics_nsignal_gen2[1] *= 2
 
-
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT,
                           systematics_nsignal_gen=[{'name': 'lumi', 'values': systematics_nsignal_gen},
-                                                   {'name': 'lumi2', 'values': systematics_nsignal_gen2}
-                          ])
+                                                   {'name': 'lumi2', 'values': systematics_nsignal_gen2}])
 
     obs = ws.set('all_obs')
     pdf = ws.obj('model')
@@ -413,10 +406,11 @@ def test_fit_asimov_syst():
     all_errors_stat = []
     for ntrue, poi_fitted in zip(NTRUE, iter_collection(pois_fitted)):
         np.testing.assert_allclose(ntrue, poi_fitted.getVal(), rtol=0.002)
-        all_errors_stat.append(poi_fitted.getError())    
+        all_errors_stat.append(poi_fitted.getError())
 
     sys_only_errors = (np.sqrt(np.array(all_errors)**2 - np.array(all_errors_stat)**2) / NTRUE)
     np.testing.assert_allclose(sys_only_errors, np.sqrt(systematics_nsignal_gen**2 + systematics_nsignal_gen2**2), rtol=5E-2)
+
 
 def test_create_workspace_raise():
     with pytest.raises(ValueError):
