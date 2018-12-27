@@ -1,9 +1,12 @@
-import ROOT
-import numpy as np
 import logging
 import string
 from itertools import product
+
+import numpy as np
+import ROOT
+
 from . import utils
+
 logging.basicConfig(level=logging.INFO)
 
 
