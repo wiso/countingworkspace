@@ -10,10 +10,14 @@ from . import utils
 logging.basicConfig(level=logging.INFO)
 
 
+def format_index(n):
+    return "%03d" % n
+
+
 def string_range(n):
     if not np.issubdtype(type(n), np.integer) or n < 0:
         raise ValueError("parameter %s of type %s should be a non-negative integer" % (n, type(n)))
-    return [str(nn) for nn in range(n)]
+    return [format_index(nn) for nn in range(n)]
 
 
 def safe_factory(func):
@@ -215,9 +219,9 @@ def dot(ws, var1, var2, name=None, nvar=None, operation='prod'):
             raise ValueError('cannot find variables %s %s of same size' % (var1, var2))
         nvar = s1
     for ivar in range(nvar):
-        v1_name = var1.format(index0=ivar)
-        v2_name = var2.format(index0=ivar)
-        prod_name = name.format(index0=ivar)
+        v1_name = var1.format(index0=format_index(ivar))
+        v2_name = var2.format(index0=format_index(ivar))
+        prod_name = name.format(index0=format_index(ivar))
         if ws.obj(v1_name) is None:
             raise ValueError('cannot find "%s"' % v1_name)
         if ws.obj(v2_name) is None:

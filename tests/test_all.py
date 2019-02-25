@@ -1,4 +1,4 @@
-from countingworkspace import create_workspace
+from countingworkspace import create_workspace, format_index
 import countingworkspace
 from countingworkspace.examples import NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT, LUMI, XSECFID_X_BR_PRODUCTION_MODES
 import numpy as np
@@ -9,7 +9,7 @@ import ROOT
 
 
 def test_string_range():
-    assert countingworkspace.string_range(2) == ['0', '1']
+    assert countingworkspace.string_range(2) == ['000', '001']
 
 
 def test_create_scalar():
@@ -115,7 +115,7 @@ def test_create_variable_matrix():
 
     for y in range(2):
         for x in range(3):
-            v = ws.var('myeff_cat{cat}_proc{proc}'.format(cat=y, proc=x))
+            v = ws.var('myeff_cat{cat}_proc{proc}'.format(cat=format_index(y), proc=format_index(x)))
             assert v
             assert v.getVal() == eff[y][x]
 
@@ -146,7 +146,7 @@ def test_create_efficiencies():
 
     for y in range(2):
         for x in range(3):
-            v = ws.var('myeff_cat{cat}_proc{proc}'.format(cat=y, proc=x))
+            v = ws.var('myeff_cat{cat}_proc{proc}'.format(cat=format_index(y), proc=format_index(x)))
             assert v
             assert v.getVal() == eff[y][x]
 
@@ -176,10 +176,8 @@ def test_create_formula():
     xsvalues = np.arange(1, NPROC + 1)
     countingworkspace.create_variables(ws, 'xsec_{proc}', nbins=NPROC, values=xsvalues)
     countingworkspace.create_variables(ws, 'prod:ntrue_{proc}(lumi[100], xsec_{proc})', nbins=NPROC)
-    assert ws.obj('ntrue_0').getVal() == 100 * 1
-    assert ws.obj('ntrue_1').getVal() == 100 * 2
-    assert ws.obj('ntrue_2').getVal() == 100 * 3
-    assert ws.obj('ntrue_3').getVal() == 100 * 4
+    for i, xs in enumerate(xsvalues):
+        assert(ws.obj('ntrue_%s' % format_index(i)) == 100 * (i + 1))
 
 
 def test_dot():
@@ -190,11 +188,11 @@ def test_dot():
     countingworkspace.create_variables(ws, 'b_{index0}', nbins=10, values=b)
     countingworkspace.dot(ws, 'a_{index0}', 'b_{index0}', nvar=10)
     for i, c in enumerate(a * b):
-        assert ws.obj('a_x_b_%d' % i).getVal() == c
+        assert ws.obj('a_x_b_%s' % format_index(i)).getVal() == c
 
     countingworkspace.dot(ws, 'a_{index0}', 'b_{index0}', 'd_{index0}')
     for i, c in enumerate(a * b):
-        assert ws.obj('d_%d' % i).getVal() == c
+        assert ws.obj('d_%s' % format_index(i)).getVal() == c
 
 
 def test_sum():
@@ -205,11 +203,11 @@ def test_sum():
     countingworkspace.create_variables(ws, 'b_{index0}', nbins=10, values=b)
     countingworkspace.sum(ws, 'a_{index0}', 'b_{index0}', nvar=10)
     for i, c in enumerate(a + b):
-        assert ws.obj('a_plus_b_%d' % i).getVal() == c
+        assert ws.obj('a_plus_b_%s' % format_index(i)).getVal() == c
 
     countingworkspace.sum(ws, 'a_{index0}', 'b_{index0}', 'd_{index0}')
     for i, c in enumerate(a + b):
-        assert ws.obj('d_%d' % i).getVal() == c
+        assert ws.obj('d_%s' % format_index(i)).getVal() == c
 
 
 def test_create_workspace():
@@ -219,14 +217,14 @@ def test_create_workspace():
     for cat in range(NCATEGORIES):
         for nproc in range(NPROCESS):
             np.testing.assert_allclose(
-                ws.var("eff_cat%d_proc%d" % (cat, nproc)).getVal(),
+                ws.var("eff_cat%s_proc%s" % (format_index(cat), format_index(nproc))).getVal(),
                 EFFICIENCIES[cat][nproc],
             )
 
     all_nexp_cat = np.dot(EFFICIENCIES, NTRUE) + EXPECTED_BKG_CAT
 
     for cat, nexp_cat in zip(range(NCATEGORIES), all_nexp_cat):
-        v = ws.obj('nexp_cat{cat}'.format(cat=cat))
+        v = ws.obj('nexp_cat{cat}'.format(cat=format_index(cat)))
         assert(v)
         v1 = v.getVal()
         np.testing.assert_allclose(v1, nexp_cat)
@@ -251,14 +249,14 @@ def test_create_workspace_systematics_nsignal_gen():
     for cat in range(NCATEGORIES):
         for nproc in range(NPROCESS):
             np.testing.assert_allclose(
-                ws.var("eff_cat%d_proc%d" % (cat, nproc)).getVal(),
+                ws.var("eff_cat%s_proc%s" % (format_index(cat), format_index(nproc))).getVal(),
                 EFFICIENCIES[cat][nproc],
             )
 
     all_nexp_cat = np.dot(EFFICIENCIES, NTRUE) + EXPECTED_BKG_CAT
 
     for cat, nexp_cat in zip(range(NCATEGORIES), all_nexp_cat):
-        v = ws.obj('nexp_cat{cat}'.format(cat=cat))
+        v = ws.obj('nexp_cat{cat}'.format(cat=format_index(cat)))
         assert(v)
         v1 = v.getVal()
         np.testing.assert_allclose(v1, nexp_cat)
@@ -267,7 +265,7 @@ def test_create_workspace_systematics_nsignal_gen():
     all_nexp_cat = np.dot(EFFICIENCIES, NTRUE * (1. + systematics_nsignal_gen)) + EXPECTED_BKG_CAT
 
     for cat, nexp_cat in zip(range(NCATEGORIES), all_nexp_cat):
-        v = ws.obj('nexp_cat{cat}'.format(cat=cat))
+        v = ws.obj('nexp_cat{cat}'.format(cat=format_index(cat)))
         assert(v)
         v1 = v.getVal()
         np.testing.assert_allclose(v1, nexp_cat)
@@ -276,7 +274,7 @@ def test_create_workspace_systematics_nsignal_gen():
     all_nexp_cat = np.dot(EFFICIENCIES, NTRUE * (1. + 2 * systematics_nsignal_gen)) + EXPECTED_BKG_CAT
 
     for cat, nexp_cat in zip(range(NCATEGORIES), all_nexp_cat):
-        v = ws.obj('nexp_cat{cat}'.format(cat=cat))
+        v = ws.obj('nexp_cat{cat}'.format(cat=format_index(cat)))
         assert(v)
         v1 = v.getVal()
         np.testing.assert_allclose(v1, nexp_cat)
@@ -293,14 +291,14 @@ def test_create_workspace_systematics_efficiencies():
     for cat in range(NCATEGORIES):
         for nproc in range(NPROCESS):
             np.testing.assert_allclose(
-                ws.var("eff_cat%d_proc%d" % (cat, nproc)).getVal(),
+                ws.var("eff_cat%s_proc%s" % (format_index(cat), format_index(nproc))).getVal(),
                 EFFICIENCIES[cat][nproc],
             )
 
     all_nexp_cat = np.dot(EFFICIENCIES, NTRUE) + EXPECTED_BKG_CAT
 
     for cat, nexp_cat in zip(range(NCATEGORIES), all_nexp_cat):
-        v = ws.obj('nexp_cat{cat}'.format(cat=cat))
+        v = ws.obj('nexp_cat{cat}'.format(cat=format_index(cat)))
         assert(v)
         v1 = v.getVal()
         np.testing.assert_allclose(v1, nexp_cat)
@@ -308,7 +306,7 @@ def test_create_workspace_systematics_efficiencies():
     ws.var('theta_lumi').setVal(2)
     all_nexp_cat = np.dot(EFFICIENCIES * (1 + 2 * systematics_efficiencies), NTRUE) + EXPECTED_BKG_CAT
     for cat, nexp_cat in zip(range(NCATEGORIES), all_nexp_cat):
-        v = ws.obj('nexp_cat{cat}'.format(cat=cat))
+        v = ws.obj('nexp_cat{cat}'.format(cat=format_index(cat)))
         assert(v)
         v1 = v.getVal()
         np.testing.assert_allclose(v1, nexp_cat)
@@ -329,7 +327,7 @@ def test_asimov_roostats():
 
     for ivar, v in enumerate(iter_collection(data_asimov.get(0))):
         if type(v) != ROOT.RooCategory:
-            np.testing.assert_allclose(v.getVal(), ws.obj('nexp_cat%s' % ivar).getVal())
+            np.testing.assert_allclose(v.getVal(), ws.obj('nexp_cat%s' % format_index(ivar)).getVal())
 
 
 def test_asimov():
@@ -466,14 +464,14 @@ def test_create_workspace_luminosity():
     ws_with_4mu_x_mu_names = ROOT.RooWorkspace()
     ws_with_4mu_x_mu_names.factory('lumi[%f]' % LUMI)
     countingworkspace.create_variables(ws_with_4mu_x_mu_names, 'xsec_{proc}',
-                                       bins=list(map(str, range(NPROCESS))),
+                                       bins=list(map(format_index, range(NPROCESS))),
                                        values=XSECFID_X_BR_PRODUCTION_MODES)
     countingworkspace.create_variables(ws_with_4mu_x_mu_names,
                                        'prod:nsignal_gen_proc{proc}(mu[1, -4, 5], mu_{proc}[1, -4, 5], lumi, xsec_{proc})',
-                                       bins=list(map(str, range(NPROCESS))))
+                                       bins=list(map(format_index, range(NPROCESS))))
 
-    create_workspace(list(map(str, range(NCATEGORIES))),
-                     list(map(str, range(NPROCESS))), None, EFFICIENCIES, EXPECTED_BKG_CAT,
+    create_workspace(list(map(format_index, range(NCATEGORIES))),
+                     list(map(format_index, range(NPROCESS))), None, EFFICIENCIES, EXPECTED_BKG_CAT,
                      expression_nsignal_gen='nsignal_gen_proc{proc}',
                      ws=ws_with_4mu_x_mu_names)
 
@@ -571,7 +569,7 @@ def test_toy_study():
     assert 'nll' in branches
     assert 'status' in branches
     for nproc in range(NPROCESS):
-        assert ("nsignal_gen_proc%d" % nproc) in branches
-        assert ("nsignal_gen_proc%d_error" % nproc) in branches
-        assert ("nsignal_gen_proc%d_error_up" % nproc) in branches
-        assert ("nsignal_gen_proc%d_error_down" % nproc) in branches
+        assert ("nsignal_gen_proc%s" % format_index(nproc)) in branches
+        assert ("nsignal_gen_proc%s_error" % format_index(nproc)) in branches
+        assert ("nsignal_gen_proc%s_error_up" % format_index(nproc)) in branches
+        assert ("nsignal_gen_proc%s_error_down" % format_index(nproc)) in branches
