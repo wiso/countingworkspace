@@ -43,9 +43,12 @@ def generate_toys(ws, ntoys=100):
     return ws.pdf('model').generate(all_obs_rooargset, ntoys)
 
 
-def generate_and_fit(ws, ntoys=100):
-    ws.loadSnapshot('initial')
-    toys = generate_toys(ws, ntoys)
+def generate_and_fit(ws, ws_generate=None, ntoys=100, snapshot='initial', snapshot_gen=None):
+    ws_generate = ws_generate or ws
+    snapshot_gen = snapshot_gen or snapshot
+    ws_generate.loadSnapshot(snapshot_gen)
+    toys = generate_toys(ws_generate, ntoys)
+    ws.loadSnapshot(snapshot)
     for itoy in range(ntoys):
         toy_data = toys.get(itoy)
         # TODO: bad trick
@@ -54,12 +57,12 @@ def generate_and_fit(ws, ntoys=100):
             toy_data.add(c)
         toy = ROOT.RooDataSet('toy_%d' % itoy, 'toy_%d' % itoy, toy_data)
         toy.add(toy_data)
-        ws.loadSnapshot('initial')
+        ws.loadSnapshot(snapshot)
         fr = ws.pdf('model').fitTo(toy, ROOT.RooFit.Save(True), ROOT.RooFit.PrintLevel(-2), ROOT.RooFit.Hesse(0))
         yield fr
 
 
-def toy_study(ws, ntoys=100, seed=0, save_errors=True):
+def toy_study(ws, ws_generate=None, ntoys=100, snapshot='initial', snapshot_gen=None, seed=0, save_errors=True):
     from array import array
     ROOT.RooRandom.randomGenerator().SetSeed(seed)
 
@@ -75,7 +78,7 @@ def toy_study(ws, ntoys=100, seed=0, save_errors=True):
     tree.Branch('status', status, 'status/I')
     tree.Branch('nll', nll, 'nll/F')
 
-    for result in generate_and_fit(ws, ntoys):
+    for result in generate_and_fit(ws, ws_generate, ntoys, snapshot, snapshot_gen):
         status[0] = result.status()
         nll[0] = result.minNll()
 

@@ -554,13 +554,19 @@ def test_free_variables():
 
 def test_generate_and_fit():
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
-    list(countingworkspace.utils.generate_and_fit(ws, 10))
+    assert(len(list(countingworkspace.utils.generate_and_fit(ws, ntoys=10))) == 10)
+
+
+def test_generate_and_fit_crossed():
+    ws_generate = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
+    ws_fit = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES / 2., EXPECTED_BKG_CAT)
+    assert(len(list(countingworkspace.utils.generate_and_fit(ws_generate, ws_fit, ntoys=10))) == 10)
 
 
 def test_toy_study():
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
     NTOYS = 10
-    countingworkspace.utils.toy_study(ws, NTOYS, seed=42)
+    countingworkspace.utils.toy_study(ws, ntoys=NTOYS, seed=42)
     f = ROOT.TFile.Open('result_42.root')
     tree = f.Get("results")
     assert tree
