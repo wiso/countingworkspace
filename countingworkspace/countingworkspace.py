@@ -185,13 +185,14 @@ def create_model(ws, categories, processes,
                  expression_nexpected_cat='nexp_cat{cat}',
                  expression_nobs_cat='nobs_cat{cat}',
                  expression_model_cat='model_cat{cat}',
+                 factory_model_cat='poisson',
+                 expression_nobs_err_cat=None,
                  expression_model='model'):
     if type(categories) is int:
         categories = string_range(categories)
     if type(processes) is int:
         processes = string_range(processes)
 
-    all_poissons = []
     all_exp = ROOT.RooArgSet()
     for cat in categories:
         s = ','.join([expression_nexpected_signal_cat_proc.format(cat=cat, proc=proc) for proc in processes])
@@ -199,13 +200,32 @@ def create_model(ws, categories, processes,
             s += ',' + expression_nexpected_bkg_cat.format(cat=cat)
         var_expected = ws.factory('sum:{expression_nexpected_cat}({s})'.format(expression_nexpected_cat=expression_nexpected_cat.format(cat=cat), s=s))
         all_exp.add(var_expected)
-        model = 'Poisson:{model_cat}({nobs_cat}, {nexp_cat})'.format(model_cat=expression_model_cat,
-                                                                     nobs_cat=expression_nobs_cat,
-                                                                     nexp_cat=expression_nexpected_cat)
 
-        all_poissons.append(str(ws.factory(model.format(cat=cat)).getTitle()))
+    if factory_model_cat == 'gaussian' and expression_nobs_err_cat is None:
+        raise NotImplementedError('not implemented due to a ROOT bug https://sft.its.cern.ch/jira/browse/ROOT-10069')
+        expression_nobs_err_cat = 'nobs_err_cat{cat}'
+        for cat in categories:
+            ws.factory('expr:{nobs_err_cat}("sqrt(@0)", {nexp_cat})'.format(nobs_err_cat=expression_nobs_err_cat.format(cat=cat),
+                                                                            nexp_cat=expression_nexpected_cat.format(cat=cat)))
+
+    all_pdfs = []
+    for cat in categories:
+        
+        if factory_model_cat == 'poisson':
+            model = 'Poisson:{model_cat}({nobs_cat}, {nexp_cat})'.format(model_cat=expression_model_cat,
+                                                                         nobs_cat=expression_nobs_cat,
+                                                                         nexp_cat=expression_nexpected_cat)
+        elif factory_model_cat == 'gaussian':
+            model = 'RooGaussian:{model_cat}({nobs_cat}, {nexp_cat}, {nobs_err_cat})'.format(model_cat=expression_model_cat,
+                                                                                           nobs_cat=expression_nobs_cat,
+                                                                                           nexp_cat=expression_nexpected_cat,
+                                                                                           nobs_err_cat=expression_nobs_err_cat)
+            
+        else:
+            model = factory_model_cat
+        all_pdfs.append(str(ws.factory(model.format(cat=cat)).getTitle()))
     ws.defineSet('all_exp', all_exp)
-    ws.factory('PROD:%s(%s)' % (expression_model, ','.join(all_poissons)))
+    ws.factory('PROD:%s(%s)' % (expression_model, ','.join(all_pdfs)))
 
 
 def dot(ws, var1, var2, name=None, nvar=None, operation='prod'):
@@ -249,6 +269,8 @@ def create_workspace(categories, processes,
                      expression_efficiency='eff_cat{cat}_proc{proc}',
                      expression_efficiency_with_sys='eff_cat{cat}_proc{proc}_with_sys',
                      expression_nexpected_bkg_cat='nexp_bkg_cat{cat}',
+                     factory_model_cat='poisson',
+                     expression_nobs_err_cat=None,
                      name_constrain='constrain_sys{sysname}',
                      ws=None):
     if type(categories) is int:
@@ -326,10 +348,14 @@ def create_workspace(categories, processes,
     ws.factory('PROD:prod_constrains(%s)' % ','.join([v.GetName() for v in utils.iter_collection(all_constrains)]))
 
     if sysnames:
-        create_model(ws, categories, processes, expression_model='model_nosys')
+        create_model(ws, categories, processes,
+                     factory_model_cat=factory_model_cat, expression_nobs_err_cat=expression_nobs_err_cat,
+                     expression_model='model_nosys')
         ws.factory('PROD:model(model_nosys, prod_constrains)')
     else:
-        create_model(ws, categories, processes)
+        create_model(ws, categories, processes,
+                     factory_model_cat=factory_model_cat,
+                     expression_nobs_err_cat=expression_nobs_err_cat)
     ws.saveSnapshot('initial', ws.allVars())
 
     model_config = ROOT.RooStats.ModelConfig('ModelConfig', ws)

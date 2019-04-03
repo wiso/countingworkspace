@@ -4,7 +4,7 @@ from countingworkspace.examples import NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIE
 import numpy as np
 import pytest
 import countingworkspace.utils
-from countingworkspace.utils import iter_collection
+from countingworkspace.utils import iter_collection, get_free_variables
 import ROOT
 
 
@@ -559,12 +559,12 @@ def test_generate_and_fit():
 
 def test_toy_study():
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
-    NTOYS = 10
-    countingworkspace.utils.toy_study(ws, NTOYS, seed=42)
+    ntoys = 10
+    countingworkspace.utils.toy_study(ws, ntoys, seed=42)
     f = ROOT.TFile.Open('result_42.root')
     tree = f.Get("results")
     assert tree
-    assert tree.GetEntries() == NTOYS
+    assert tree.GetEntries() == ntoys
     branches = [k.GetName() for k in tree.GetListOfBranches()]
     assert 'nll' in branches
     assert 'status' in branches
@@ -573,3 +573,70 @@ def test_toy_study():
         assert ("nsignal_gen_proc%s_error" % format_index(nproc)) in branches
         assert ("nsignal_gen_proc%s_error_up" % format_index(nproc)) in branches
         assert ("nsignal_gen_proc%s_error_down" % format_index(nproc)) in branches
+
+
+def test_trivial_unfolding():
+    ncat = 4
+    nprocess = 4
+    efficiencies = np.eye(4)
+    ntrue = np.array([10, 20, 30, 40])
+    bkg = np.zeros(4)
+    ws = create_workspace(ncat, nprocess, ntrue, efficiencies, bkg)
+    data_asimov = countingworkspace.utils.generate_asimov(ws)
+    pdf = ws.obj('model')
+    fr = pdf.fitTo(data_asimov, ROOT.RooFit.Save())
+    assert(fr.status() == 0)
+
+    for nproc, t in enumerate(ntrue):
+        var_name = "nsignal_gen_proc%s" % format_index(nproc)
+        assert ws.obj(var_name).getVal() == pytest.approx(t)
+        assert ws.obj(var_name).getError() == pytest.approx(np.sqrt(t))
+
+
+@pytest.mark.skip
+def test_trivial_unfolding_gaus():
+    ncat = 4
+    nprocess = 4
+    efficiencies = np.eye(4)
+    ntrue = np.array([10, 20, 30, 40])
+    bkg = np.zeros(4)
+    ws = create_workspace(ncat, nprocess, ntrue, efficiencies, bkg, factory_model_cat='gaussian')
+
+    data_asimov = countingworkspace.utils.generate_asimov(ws)
+    pdf = ws.obj('model')
+    fr = pdf.fitTo(data_asimov, ROOT.RooFit.Save())
+    assert(fr.status() == 0)
+
+    for nproc, t in enumerate(ntrue):
+        var_name = "nsignal_gen_proc%s" % format_index(nproc)
+        assert ws.obj(var_name).getVal() == pytest.approx(t)
+        assert ws.obj(var_name).getError() == pytest.approx(np.sqrt(t))
+
+
+def test_trivial_unfolding_gaus_fixed_error():
+    ncat = 4
+    nprocess = 4
+    efficiencies = np.eye(4)
+    ntrue = np.array([10, 20, 30, 40])
+    bkg = np.zeros(4)
+    ws = ROOT.RooWorkspace()
+    expected_errors = [5., 10., 1., 0.001]
+    for icat, error in enumerate(expected_errors):
+        ws.factory('error_cat%s[%f]' % (format_index(icat), error))
+    ws = create_workspace(ncat, nprocess, ntrue, efficiencies, bkg,
+                          factory_model_cat='gaussian',
+                          expression_nobs_err_cat='error_cat{cat}',
+                          ws=ws
+                          )
+
+    data_asimov = countingworkspace.utils.generate_asimov(ws)
+    pdf = ws.obj('model')
+    fr = pdf.fitTo(data_asimov, ROOT.RooFit.Save())
+    assert(fr.status() == 0)
+
+
+    for nproc, t in enumerate(ntrue):
+        var_name = "nsignal_gen_proc%s" % format_index(nproc)
+        expected_error = ws.obj('error_cat%s' % format_index(nproc)).getVal()
+        assert ws.obj(var_name).getVal() == pytest.approx(t, rel=0.1)
+        assert ws.obj(var_name).getError() == pytest.approx(expected_error, rel=0.1)
