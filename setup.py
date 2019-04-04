@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="countingworkspace",
-    version="0.1.0",
+    version="0.2.0",
     author="Ruggero Turra",
     author_email="ruggero.turra@cern.ch",
     description="Simple builder for counting experiment RooFit workspace",
