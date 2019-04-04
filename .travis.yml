@@ -2,8 +2,8 @@ language: python
 
 matrix:
     include:
-        - python: 2.7
-          env: PYTHON=2.7 ROOT=6.04
+#        - python: 2.7
+#          env: PYTHON=2.7 ROOT=6.04
         - python: 3.4
           env: PYTHON=3.4 ROOT=6.04
 install:
@@ -19,7 +19,7 @@ install:
   - conda config --add channels http://conda.anaconda.org/NLeSC
   - conda config --add channels http://conda.anaconda.org/conda-forge
   - conda config --set show_channel_urls yes
-  - conda create -q -n testenv python=${PYTHON} root=${ROOT} numpy pytest pytest-cov=2.4.0 python-coveralls>=2.8.0 coveralls
+  - conda create -q -n testenv python=${PYTHON} root=${ROOT} numpy scipy pytest pytest-cov=2.4.0 python-coveralls>=2.8.0 coveralls
   - export CONDA_ENV_PATH=$HOME/miniconda/envs/testenv
   - source activate testenv
 
