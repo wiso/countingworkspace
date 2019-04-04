@@ -2,8 +2,8 @@ language: python
 
 matrix:
     include:
-        - python: 2.7
-          env: PYTHON=2.7 ROOT=6.04
+#        - python: 2.7
+#          env: PYTHON=2.7 ROOT=6.04
         - python: 3.4
           env: PYTHON=3.4 ROOT=6.04
 install:
