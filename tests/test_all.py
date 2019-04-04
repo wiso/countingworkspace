@@ -565,12 +565,13 @@ def test_generate_and_fit_crossed():
 
 def test_toy_study():
     ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
-    NTOYS = 10
-    countingworkspace.utils.toy_study(ws, ntoys=NTOYS, seed=42)
+    ntoys = 10
+    countingworkspace.utils.toy_study(ws, ntoys=ntoys, seed=42,
+                                      plugins=[countingworkspace.utils.ToyStudyError(save_asym=True)])
     f = ROOT.TFile.Open('result_42.root')
     tree = f.Get("results")
     assert tree
-    assert tree.GetEntries() == NTOYS
+    assert tree.GetEntries() == ntoys
     branches = [k.GetName() for k in tree.GetListOfBranches()]
     assert 'nll' in branches
     assert 'status' in branches
