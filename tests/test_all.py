@@ -580,3 +580,34 @@ def test_toy_study():
         assert ("nsignal_gen_proc%s_error" % format_index(nproc)) in branches
         assert ("nsignal_gen_proc%s_error_up" % format_index(nproc)) in branches
         assert ("nsignal_gen_proc%s_error_down" % format_index(nproc)) in branches
+
+
+def test_toy_coverage():
+    ws = create_workspace(NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIES, EXPECTED_BKG_CAT)
+    ntoys = 10
+    countingworkspace.utils.toy_study(ws, ntoys=ntoys, seed=42,
+                                      plugins=[countingworkspace.utils.ToyStudyError(save_asym=True),
+                                               countingworkspace.utils.ToyStudyCoverage(ws.obj('ModelConfig').GetParametersOfInterest(),
+                                                                                        NTRUE, significance=1, output_var='isCoveredAll'),
+                                               countingworkspace.utils.ToyStudyCoverage(ws.obj('ModelConfig').GetParametersOfInterest(),
+                                                                                        NTRUE, significance=2, output_var='isCoveredAll2sigma')
+                                      ])
+    f = ROOT.TFile.Open('result_42.root')
+    tree = f.Get("results")
+    assert tree
+    assert tree.GetEntries() == ntoys
+    branches = [k.GetName() for k in tree.GetListOfBranches()]
+    assert 'nll' in branches
+    assert 'status' in branches
+    assert 'isCoveredAll' in branches
+    for nproc in range(NPROCESS):
+        assert ("nsignal_gen_proc%s" % format_index(nproc)) in branches
+        assert ("nsignal_gen_proc%s_error" % format_index(nproc)) in branches
+        assert ("nsignal_gen_proc%s_error_up" % format_index(nproc)) in branches
+        assert ("nsignal_gen_proc%s_error_down" % format_index(nproc)) in branches
+
+    h1sigma = ROOT.TH1F("h1sigma", "h1sigma", 2, 0, 2)
+    h2sigma = ROOT.TH1F("h2sigma", "h2sigma", 2, 0, 2)
+    tree.Draw("isCoveredAll>>h1sigma")
+    tree.Draw("isCoveredAll2sigma>>h2sigma")
+    assert(h1sigma.GetMean() <= h2sigma.GetMean())

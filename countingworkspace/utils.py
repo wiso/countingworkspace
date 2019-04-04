@@ -1,5 +1,7 @@
 import ROOT
+import numpy as np
 from array import array
+from scipy import stats
 
 
 def loop_iterator(iterator):
@@ -77,7 +79,7 @@ class ToyStudyError(ToyStudyPlugin):
         self.variables = set()  # filled during first event
 
     def initialize(self, tree):
-        super().initialize(tree)
+        super(ToyStudyError, self).initialize(tree)
         self.all_values_error = {}
         if self.save_asym:
             self.all_values_error_up = {}
@@ -101,6 +103,70 @@ class ToyStudyError(ToyStudyPlugin):
             if self.save_asym:
                 self.all_values_error_up[name][0] = rr.getErrorHi()
                 self.all_values_error_down[name][0] = rr.getErrorLo()
+
+
+class ToyStudyCoverage(ToyStudyPlugin):
+    def __init__(self, variables, true_values, pvalue=None, significance=None, output_var=None):
+        
+
+        if type(variables) is ROOT.RooArgSet:
+            self.variables = [v.GetName() for v in iter_collection(variables)]
+        else:
+            self.variables = variables
+        self.ndim = len(self.variables)
+        if len(true_values) != self.ndim:
+            raise ValueError('true values have different dimensions than variables')
+        self.true_values = true_values
+        
+        if pvalue is None and significance is None:
+            significance = 1
+        if pvalue is None and significance is not None:
+            self.pvalue =self.get_likelihood_count_levels(self.ndim, significance)
+        elif pvalue is not None and significance is None:
+            self.pvalue = pvalue
+        else:
+            raise ValueError('cannot specify both significance and pvalue')
+
+        if output_var is None:
+            output_var = 'isCovered_%s' % '_'.join(self.variables)
+        self.output_var = output_var
+
+    def get_likelihood_count_levels(self, ndof, z):
+        p = 1 - stats.norm(0, 1).sf(z) * 2
+        return stats.chi2(ndof).isf(1 - p)
+
+    def get_implicit_ellipse(self, values, true, A):
+        return np.einsum('...i,ij,...j', true - values, A, true - values)
+
+    def compute_is_covered(self, true, value, cov, level):
+        dim = len(true)
+        inv_cov = np.linalg.inv(cov)
+        return (self.get_implicit_ellipse(true, value, inv_cov) < level)
+
+    def initialize(self, tree):
+        super(ToyStudyCoverage, self).initialize(tree)
+        self.covered = array('b', [False])
+        self.tree.Branch(self.output_var, self.covered, '%s/B' % self.output_var)
+
+    def run(self, fit_result):
+        cov = np.zeros((self.ndim, self.ndim))
+        rr = list(iter_collection(fit_result.floatParsFinal()))
+        errs = {v.GetName(): v.getError() for v in rr}
+        vals = {v.GetName(): v.getVal() for v in rr}
+        for i1, v1 in enumerate(self.variables):
+            e1 = errs[v1]
+            for i2, v2 in enumerate(self.variables):
+                e2 = errs[v2]
+                corr = fit_result.correlation(v1, v2)
+                cov[i1, i2] = corr * e1 * e2
+
+        fitted_values = [vals[n] for n in self.variables]
+        
+        is_covered = self.compute_is_covered(self.true_values, fitted_values, cov, self.pvalue)
+
+        self.covered[0] = is_covered
+
+
 
 
 def toy_study(ws, ws_generate=None, ntoys=100, snapshot='initial', snapshot_gen=None, seed=0, plugins=None):
