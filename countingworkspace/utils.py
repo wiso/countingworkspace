@@ -5,10 +5,10 @@ from scipy import stats
 
 
 def loop_iterator(iterator):
-    object = iterator.Next()
-    while object:
-        yield object
-        object = iterator.Next()
+    obj = iterator.Next()
+    while obj:
+        yield obj
+        obj = iterator.Next()
 
 
 def iter_collection(rooAbsCollection):
@@ -107,9 +107,8 @@ class ToyStudyError(ToyStudyPlugin):
 
 class ToyStudyCoverage(ToyStudyPlugin):
     def __init__(self, variables, true_values, pvalue=None, significance=None, output_var=None):
-        
 
-        if type(variables) is ROOT.RooArgSet:
+        if isinstance(variables, ROOT.RooArgSet):
             self.variables = [v.GetName() for v in iter_collection(variables)]
         else:
             self.variables = variables
@@ -117,11 +116,11 @@ class ToyStudyCoverage(ToyStudyPlugin):
         if len(true_values) != self.ndim:
             raise ValueError('true values have different dimensions than variables')
         self.true_values = true_values
-        
+
         if pvalue is None and significance is None:
             significance = 1
         if pvalue is None and significance is not None:
-            self.pvalue =self.get_likelihood_count_levels(self.ndim, significance)
+            self.pvalue = self.get_likelihood_count_levels(self.ndim, significance)
         elif pvalue is not None and significance is None:
             self.pvalue = pvalue
         else:
@@ -139,7 +138,6 @@ class ToyStudyCoverage(ToyStudyPlugin):
         return np.einsum('...i,ij,...j', true - values, A, true - values)
 
     def compute_is_covered(self, true, value, cov, level):
-        dim = len(true)
         inv_cov = np.linalg.inv(cov)
         return (self.get_implicit_ellipse(true, value, inv_cov) < level)
 
@@ -161,12 +159,10 @@ class ToyStudyCoverage(ToyStudyPlugin):
                 cov[i1, i2] = corr * e1 * e2
 
         fitted_values = [vals[n] for n in self.variables]
-        
+
         is_covered = self.compute_is_covered(self.true_values, fitted_values, cov, self.pvalue)
 
         self.covered[0] = is_covered
-
-
 
 
 def toy_study(ws, ws_generate=None, ntoys=100, snapshot='initial', snapshot_gen=None, seed=0, plugins=None):

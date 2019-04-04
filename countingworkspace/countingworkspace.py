@@ -33,9 +33,9 @@ ROOT.RooWorkspace.factory = safe_factory(ROOT.RooWorkspace.factory)
 
 
 def create_observed_number_of_events(ws, bins_cat, expression='nobs_cat{cat}', nmax=100000):
-    if type(bins_cat) == int:
+    if isinstance(bins_cat, int):
         bins_cat = string_range(bins_cat)
-    logging.info('adding observables for {ncat} categories'.format(ncat=len(bins_cat)))
+    logging.info('adding observables for %d categories', len(bins_cat))
 
     all_obs = ROOT.RooArgSet()
     for b in bins_cat:
@@ -73,7 +73,7 @@ def create_variables(ws, expression, nbins=None, bins=None, values=None, ranges=
         nbins = np.atleast_1d(nbins)
 
     if bins is not None:
-        if type(bins[0]) != list and type(bins[0]) != tuple:
+        if not isinstance(bins[0], list) and not isinstance(bins[0], tuple):
             bins = [bins]
 
     if values is not None:
@@ -145,15 +145,15 @@ def create_variables(ws, expression, nbins=None, bins=None, values=None, ranges=
 def create_efficiencies(ws, efficiencies, expression='eff_cat{cat}_proc{proc}',
                         bins_proc=None, bins_cat=None):
     ncat, nproc = efficiencies.shape
-    if bins_proc is None or type(bins_proc) is int:
+    if bins_proc is None or isinstance(bins_proc, int):
         bins_proc = string_range(nproc)
-        if type(bins_proc) is int and bins_proc != nproc:
+        if isinstance(bins_proc, int) and bins_proc != nproc:
             raise ValueError("Number of processes (%d) don't match number efficiency shape (%d, %d)" % (bins_proc, ncat, nproc))
-    if bins_cat is None or type(bins_cat) is int:
+    if bins_cat is None or isinstance(bins_cat, int):
         bins_cat = string_range(ncat)
-        if type(bins_cat) is int and bins_cat != ncat:
+        if isinstance(bins_cat, int) and bins_cat != ncat:
             raise ValueError("Number of categories (%d) don't match number efficiency shape (%d, %d)" % (bins_cat, ncat, nproc))
-    logging.info('adding efficiencies for {ncat} categories and {nproc} processes'.format(ncat=ncat, nproc=nproc))
+    logging.info('adding efficiencies for %d categories and %d processes', ncat, nproc)
     for icat, cat in enumerate(bins_cat):
         for iproc, proc in enumerate(bins_proc):
             value = efficiencies[icat][iproc]
@@ -165,12 +165,12 @@ def create_expected_number_of_signal_events(ws, bins_cat, bins_proc,
                                             expression_efficiency='eff_cat{cat}_proc{proc}',
                                             expression_nexp='nexp_signal_cat{cat}_proc{proc}'):
     expression = 'prod:%s(%s, %s)' % (expression_nexp, expression_nsignal_gen, expression_efficiency)
-    if type(bins_cat) is int:
+    if isinstance(bins_cat, int):
         bins_cat = string_range(bins_cat)
-    if type(bins_proc) is int:
+    if isinstance(bins_proc, int):
         bins_proc = string_range(bins_proc)
     ncat, nproc = len(bins_cat), len(bins_proc)
-    logging.info('adding expected events for {ncat} categories and {nproc} processes'.format(ncat=ncat, nproc=nproc))
+    logging.info('adding expected events for %d categories and %d processes', ncat, nproc)
     all_expected = ROOT.RooArgSet()
     for cat, proc in product(bins_cat, bins_proc):
         # expected events for given category and process
@@ -188,9 +188,9 @@ def create_model(ws, categories, processes,
                  factory_model_cat='poisson',
                  expression_nobs_err_cat=None,
                  expression_model='model'):
-    if type(categories) is int:
+    if isinstance(categories, int):
         categories = string_range(categories)
-    if type(processes) is int:
+    if isinstance(processes, int):
         processes = string_range(processes)
 
     all_exp = ROOT.RooArgSet()
@@ -210,17 +210,17 @@ def create_model(ws, categories, processes,
 
     all_pdfs = []
     for cat in categories:
-        
+
         if factory_model_cat == 'poisson':
             model = 'Poisson:{model_cat}({nobs_cat}, {nexp_cat})'.format(model_cat=expression_model_cat,
                                                                          nobs_cat=expression_nobs_cat,
                                                                          nexp_cat=expression_nexpected_cat)
         elif factory_model_cat == 'gaussian':
             model = 'RooGaussian:{model_cat}({nobs_cat}, {nexp_cat}, {nobs_err_cat})'.format(model_cat=expression_model_cat,
-                                                                                           nobs_cat=expression_nobs_cat,
-                                                                                           nexp_cat=expression_nexpected_cat,
-                                                                                           nobs_err_cat=expression_nobs_err_cat)
-            
+                                                                                             nobs_cat=expression_nobs_cat,
+                                                                                             nexp_cat=expression_nexpected_cat,
+                                                                                             nobs_err_cat=expression_nobs_err_cat)
+
         else:
             model = factory_model_cat
         all_pdfs.append(str(ws.factory(model.format(cat=cat)).getTitle()))
@@ -251,7 +251,7 @@ def dot(ws, var1, var2, name=None, nvar=None, operation='prod'):
     return results
 
 
-def sum(ws, var1, var2, name=None, nvar=None):
+def add(ws, var1, var2, name=None, nvar=None):
     if name is None:
         name = var1.replace('_{index0}', '') + '_plus_' + var2
     return dot(ws, var1, var2, name, nvar, operation='sum')
@@ -273,9 +273,9 @@ def create_workspace(categories, processes,
                      expression_nobs_err_cat=None,
                      name_constrain='constrain_sys{sysname}',
                      ws=None):
-    if type(categories) is int:
+    if isinstance(categories, int):
         categories = string_range(categories)
-    if type(processes) is int:
+    if isinstance(processes, int):
         processes = string_range(processes)
     if not len(categories) or not len(processes):
         raise ValueError('ncategories and nprocess must be positive')
@@ -324,7 +324,7 @@ def create_workspace(categories, processes,
             sysnames.add(sysname)
             sysvalues = sys_info['values']
             if len(sysvalues) != nproc:
-                raise ValueError('size of values for systematics {sysname} is different from the number of processes ({nproc})'.format(sysname=sysname, ncat=nproc))
+                raise ValueError('size of values for systematics {sysname} is different from the number of processes ({nproc})'.format(sysname=sysname, nproc=nproc))
             expression_response = 'expr:response_sys{sysname}_nprod_proc{{proc}}("1 + @0 * @1", sigma_{sysname}_nprod_proc{{proc}}[{{value}}], theta_{sysname})'.format(sysname=sysname)
             create_variables(ws, expression_response, bins=processes, values=sysvalues)
         sysnames_joint = ','.join(['response_sys{sysname}_nprod_proc{{proc}}'.format(sysname=sys_info['name'])

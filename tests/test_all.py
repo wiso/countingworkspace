@@ -4,7 +4,7 @@ from countingworkspace.examples import NCATEGORIES, NPROCESS, NTRUE, EFFICIENCIE
 import numpy as np
 import pytest
 import countingworkspace.utils
-from countingworkspace.utils import iter_collection, get_free_variables
+from countingworkspace.utils import iter_collection
 import ROOT
 
 
@@ -195,17 +195,17 @@ def test_dot():
         assert ws.obj('d_%s' % format_index(i)).getVal() == c
 
 
-def test_sum():
+def test_add():
     ws = ROOT.RooWorkspace()
     a = np.arange(10)
     b = np.arange(10) - 1.5
     countingworkspace.create_variables(ws, 'a_{index0}', nbins=10, values=a)
     countingworkspace.create_variables(ws, 'b_{index0}', nbins=10, values=b)
-    countingworkspace.sum(ws, 'a_{index0}', 'b_{index0}', nvar=10)
+    countingworkspace.add(ws, 'a_{index0}', 'b_{index0}', nvar=10)
     for i, c in enumerate(a + b):
         assert ws.obj('a_plus_b_%s' % format_index(i)).getVal() == c
 
-    countingworkspace.sum(ws, 'a_{index0}', 'b_{index0}', 'd_{index0}')
+    countingworkspace.add(ws, 'a_{index0}', 'b_{index0}', 'd_{index0}')
     for i, c in enumerate(a + b):
         assert ws.obj('d_%s' % format_index(i)).getVal() == c
 
@@ -326,7 +326,7 @@ def test_asimov_roostats():
     assert(data_asimov.numEntries() == 1)
 
     for ivar, v in enumerate(iter_collection(data_asimov.get(0))):
-        if type(v) != ROOT.RooCategory:
+        if not isinstance(v, ROOT.RooCategory):
             np.testing.assert_allclose(v.getVal(), ws.obj('nexp_cat%s' % format_index(ivar)).getVal())
 
 
@@ -591,7 +591,7 @@ def test_toy_coverage():
                                                                                         NTRUE, significance=1, output_var='isCoveredAll'),
                                                countingworkspace.utils.ToyStudyCoverage(ws.obj('ModelConfig').GetParametersOfInterest(),
                                                                                         NTRUE, significance=2, output_var='isCoveredAll2sigma')
-                                      ])
+                                               ])
     f = ROOT.TFile.Open('result_42.root')
     tree = f.Get("results")
     assert tree
@@ -611,6 +611,7 @@ def test_toy_coverage():
     tree.Draw("isCoveredAll>>h1sigma")
     tree.Draw("isCoveredAll2sigma>>h2sigma")
     assert(h1sigma.GetMean() <= h2sigma.GetMean())
+
 
 def test_trivial_unfolding():
     ncat = 4
@@ -671,10 +672,8 @@ def test_trivial_unfolding_gaus_fixed_error():
     fr = pdf.fitTo(data_asimov, ROOT.RooFit.Save())
     assert(fr.status() == 0)
 
-
     for nproc, t in enumerate(ntrue):
         var_name = "nsignal_gen_proc%s" % format_index(nproc)
         expected_error = ws.obj('error_cat%s' % format_index(nproc)).getVal()
         assert ws.obj(var_name).getVal() == pytest.approx(t, rel=0.1)
         assert ws.obj(var_name).getError() == pytest.approx(expected_error, rel=0.1)
-
