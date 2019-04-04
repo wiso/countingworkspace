@@ -591,6 +591,7 @@ def test_toy_coverage():
                                                                                         NTRUE, significance=1, output_var='isCoveredAll'),
                                                countingworkspace.utils.ToyStudyCoverage(ws.obj('ModelConfig').GetParametersOfInterest(),
                                                                                         NTRUE, significance=2, output_var='isCoveredAll2sigma')
+
                                                ])
     f = ROOT.TFile.Open('result_42.root')
     tree = f.Get("results")
@@ -611,7 +612,6 @@ def test_toy_coverage():
     tree.Draw("isCoveredAll>>h1sigma")
     tree.Draw("isCoveredAll2sigma>>h2sigma")
     assert(h1sigma.GetMean() <= h2sigma.GetMean())
-
 
 def test_trivial_unfolding():
     ncat = 4
@@ -677,3 +677,4 @@ def test_trivial_unfolding_gaus_fixed_error():
         expected_error = ws.obj('error_cat%s' % format_index(nproc)).getVal()
         assert ws.obj(var_name).getVal() == pytest.approx(t, rel=0.1)
         assert ws.obj(var_name).getError() == pytest.approx(expected_error, rel=0.1)
+
