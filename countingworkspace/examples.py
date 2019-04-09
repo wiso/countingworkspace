@@ -1,5 +1,8 @@
 import numpy as np
 
+XSECTION_HIGGS_TOTAL = {'GGH': 48.52, 'VBF': 3.779, 'WH': 1.369, 'ZH': 0.8824, 'BBH': 0.4863, 'TTH': 0.5065, 'GGZH': 0.1227}
+
+
 NCATEGORIES = 29
 NPROCESS = 4
 LUMI = 79.9  # /fb
@@ -77,3 +80,43 @@ EFFICIENCIES_CAT_PRODUCTIONMODE = np.array(
 EFFICIENCIES = EFFICIENCIES_CAT_PRODUCTIONMODE * 0.9
 
 NAMES_PROC = ['ggF', 'VBF', 'VH', 'TOP']
+
+
+### ttHyy 140/fb ATLAS-CONF-2019-004
+ATLAS_CONF_2019_004 = {
+    "LUMI": 138.97,  # fb
+    "NPROCESS": 9,
+    "PROCESS_NAMES": ['TTH', 'THJB', 'TWH', 'GGH', 'VBF', 'WH', 'ZH', 'GGZH', 'BBH'],
+    "NTRUE": LUMI * BR * np.array([XSECTION_HIGGS_TOTAL[p] for p in PROCESS_NAMES]),
+    "NCATEGORIES": 7,
+    "CAT_NAMES": ['LEP1', 'LEP2', 'LEP3', 'HAD1', 'HAD2', 'HAD3', 'HAD4'],
+    "EFFICIENCIES": [
+        [0.0342, 0.0253, 0.0306, 1.6E−4, 3.0E−4, 0.0012, 0.0029, 0.0084, 0.0011],
+        [0.0537, 0.0173, 0.0470, 8.9E−5, 1.4E−4, 6.8E−4, 0.0017, 0.00615, 5.9E−4],
+        [0.0387, 0.0073, 0.0351, 2.7E−5, 4.2E−5, 2.3E−4, 6.1E−4, 0.00225, 1.9E−4],
+        [0.0482, 0.0049, 0.0544, 1.5E−5, 1.8E−5, 1.5E−4, 3.8E−4, 0.00157, 9.1E−5],
+        [0.0101, 0.0126, 0.0116, 5.0E−7, 1.2E−6, 2.6E−4, 1.8E−4, 3.7E−4, 9.8E−6],
+        [0.0273, 0.0092, 0.0256, 2.1E−7, 6.6E−7, 2.0E−4, 1.1E−4, 2.5E−4, 8.3E−6],
+        [0.0549, 0.0053, 0.0546, 2.3E−7, 3.8E−7, 1.1E−4, 6.5E−5, 2.2E−4, 0],
+        ]
+    "EXPECTED_BKG" = [4.6, 7.5, 7.5, 4.5, 16.5, 56.0, 101],  # in 90% window
+    "EXPECTED_BKG_HIGGS" = [0.42, 0.43, 0.49, 0.8, 1.1, 3.1, 5]
+}
+
+ATLAS_CONF_2019_004_SIMPLIFIED = {
+    "LUMI": 138.97,  # fb
+    "NPROCESS": 1,
+    "NTRUE": LUMI * BR * XSECTION_HIGGS_TOTAL['TTH'],
+    "NCATEGORIES": 7,
+    "CAT_NAMES": ['LEP1', 'LEP2', 'LEP3', 'HAD1', 'HAD2', 'HAD3', 'HAD4'],
+    "EFFICIENCIES": [
+        [0.0342],
+        [0.0537],
+        [0.0387],
+        [0.0482],
+        [0.0101],
+        [0.0273],
+        [0.0549],
+        ]
+    "EXPECTED_BKG" = [4.6 + 0.42, 7.5 + 0.43, 7.5 + 0.49, 4.5 + 0.8, 16.5 + 1.1, 56.0 + 3.1, 101 + 5],  # in 90% window
+}
