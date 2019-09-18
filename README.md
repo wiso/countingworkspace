@@ -34,9 +34,9 @@ LUMI = 100.
 ws = ROOT.RooWorkspace()
 ws.factory('lumi[%f]' % LUMI)
 # and the cross sections:
-xsections = create_variables(ws, 'xsec_{proc}',          # {proc} is an index, you can call as you prefer
-                             bins=NAMES_PROC,    # the names
-                             values=[101.5, 7.99])      # the values of the cross sections
+xsections = create_variables(ws, 'xsec_{proc}',     # {proc} is an index, you can call as you prefer
+                             bins=NAMES_PROC,       # the names
+                             values=[101.5, 7.99])  # the values of the cross sections
 create_workspace(NCATEGORIES, NAMES_PROC,
                  efficiencies=EFFICIENCIES,
                  nexpected_bkg_cat=EXPECTED_BKG_CAT,
