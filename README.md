@@ -25,10 +25,11 @@ Here a simple example:
 
 ```python
 NAMES_PROC = ['proc1', 'proc2']
-NCATEGORIES = 2
+NCATEGORIES = 3
 EFFICIENCIES = [[0.3, 0.1],
-                [0.5, 0.4]]
-EXPECTED_BKG_CAT = [100, 30]
+                [0.5, 0.4],
+                [0.2, 0.2]]
+EXPECTED_BKG_CAT = [100, 30, 10]
 LUMI = 100.
 # first create the parameters needed for the parametrization. The luminosity
 ws = ROOT.RooWorkspace()
