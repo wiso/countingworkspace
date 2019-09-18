@@ -10,7 +10,11 @@ The statistical model describes the migration of events from truth-bins (e.g. pr
 
 <img src="https://raw.githubusercontent.com/wiso/countingworkspace/master/imgs/formula1.png" width="30%"/>
 
-The product is over all the reconstructed categories. The expected number of events for each category can be parametrized in various ways, the preferred one is:
+The product is over all the reconstructed categories. The number of expected events in each category is:
+
+<img src="https://raw.githubusercontent.com/wiso/countingworkspace/master/imgs/formula3.png" width="60%"/>
+
+The generated number of events for each process can be parametrized in any way. A popular one in hep is:
 
 <img src="https://raw.githubusercontent.com/wiso/countingworkspace/master/imgs/formula2.png" width="60%"/>
 
