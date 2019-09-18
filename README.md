@@ -8,7 +8,39 @@ Very simple python package to create very simple counting experiment RooFit work
 
 The statistical model describes the migration of events from truth-bins (e.g. processes) and reco-category. The implemented likelihood is a product of Poissonian distributions:
 
+<img src="https://raw.githubusercontent.com/wiso/countingworkspace/master/imgs/formula1.png" width="30%"/>
 
+The product is over all the reconstructed categories. The expected number of events for each category can be parametrized in various ways, the preferred one is:
+
+<img src="https://raw.githubusercontent.com/wiso/countingworkspace/master/imgs/formula2.png" width="60%"/>
+
+which implement the luminosity of the signal (the overall normalization), its cross section and efficiencies. The background is added on top of that.
+
+Here a simple example:
+
+```python
+NAMES_PROC = ['proc1', 'proc2']
+NCATEGORIES = 2
+EFFICIENCIES = [[0.3, 0.1],
+                [0.5, 0.4]]
+EXPECTED_BKG_CAT = [100, 30]
+LUMI = 100.
+# first create the parameters needed for the parametrization. The luminosity
+ws = ROOT.RooWorkspace()
+ws.factory('lumi[%f]' % LUMI)
+# and the cross sections:
+xsections = create_variables(ws, 'xsec_{proc}',          # {proc} is an index, you can call as you prefer
+                             bins=NAMES_PROC,    # the names
+                             values=[101.5, 7.99])      # the values of the cross sections
+create_workspace(NCATEGORIES, NAMES_PROC,
+                 efficiencies=EFFICIENCIES,
+                 nexpected_bkg_cat=EXPECTED_BKG_CAT,
+                 expression_nsignal_gen='prod:nsignal_gen_proc{proc}(mu_{proc}[1, -4, 5], lumi, xsec_{proc})',
+                 ws=ws)                         
+                         
+```
+
+It is also possible to add simple systematic uncertainties.
 
 There are some utilies to run toys.
 
