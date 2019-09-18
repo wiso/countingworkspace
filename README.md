@@ -14,11 +14,12 @@ The product is over all the reconstructed categories. The number of expected eve
 
 <img src="https://raw.githubusercontent.com/wiso/countingworkspace/master/imgs/formula3.png" width="60%"/>
 
+The matrix ε implements the efficiencies and the migrations. It's matrix elements are the conditional probability to be selected and reconstructed in category-c for a process-p: P[c|p].
 The generated number of events for each process can be parametrized in any way. A popular one in hep is:
 
 <img src="https://raw.githubusercontent.com/wiso/countingworkspace/master/imgs/formula2.png" width="60%"/>
 
-which implement the luminosity of the signal (the overall normalization), its cross section and efficiencies. The background is added on top of that.
+here the generated number of events are equal to the product of the luminosity (the overall normalization), its cross section and the signal strength (which is the free parameter in the fit). The background is added on top of that.
 
 Here a simple example:
 
