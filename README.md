@@ -24,6 +24,9 @@ here the generated number of events are equal to the product of the luminosity (
 Here a simple example:
 
 ```python
+import ROOT
+from countingworkspace import *
+
 NAMES_PROC = ['proc1', 'proc2']
 NCATEGORIES = 3
 EFFICIENCIES = [[0.3, 0.1],
