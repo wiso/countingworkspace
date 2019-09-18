@@ -6,7 +6,9 @@
 
 Very simple python package to create very simple counting experiment RooFit workspaces.
 
-The statistical model describes the migration of events from truth-bins (e.g. processes) and reco-category.
+The statistical model describes the migration of events from truth-bins (e.g. processes) and reco-category. The implemented likelihood is a product of Poissonian distributions:
+
+
 
 There are some utilies to run toys.
 
