@@ -57,6 +57,12 @@ def create_scalar(ws, expression, value=None, ranges=None):
         if ranges is None:
             return ws.factory('{expression}[{value}]'.format(expression=expression, value=value))
         else:
+            if value > ranges[1]:
+                logging.warning("value (%f) is not in range (%f, %f), raising range", value, ranges[0], ranges[1])
+                ranges[1] = ranges[0] + (value - ranges[0]) * 2
+            if value < ranges[0]
+                logging.warning("value (%f) is not in range (%f, %f), raising range", value, ranges[0], ranges[1])
+                ranges[0] = ranges[1] - (ranges[0] - value) * 2
             return ws.factory('{expression}[{value},{down},{up}]'.format(expression=expression,
                                                                          value=value, down=ranges[0],
                                                                          up=ranges[1]))
